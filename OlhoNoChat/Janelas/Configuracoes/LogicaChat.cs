@@ -64,6 +64,9 @@ public sealed partial class LogicaChat : LogicaDaPagina
     [ObservableProperty]
     private bool _esconderOutrosCanais;
 
+    [ObservableProperty]
+    private bool _esconderAvisos;
+
     // Chat oficial da Twitch
     [ObservableProperty]
     private bool _betterTtv;
@@ -103,6 +106,7 @@ public sealed partial class LogicaChat : LogicaDaPagina
         EsconderBots = opcoes.EsconderBots;
         EsconderGifs = opcoes.EsconderGifs;
         EsconderOutrosCanais = opcoes.EsconderOutrosCanais;
+        EsconderAvisos = opcoes.EsconderAvisos;
         BetterTtv = opcoes.BetterTtv;
         MenuDeEmotesDoBetterTtv = opcoes.MenuDeEmotesDoBetterTtv;
         Emotes7tv = opcoes.Emotes7tv;
@@ -127,6 +131,7 @@ public sealed partial class LogicaChat : LogicaDaPagina
                 opcoes.EsconderBots = EsconderBots;
                 opcoes.EsconderGifs = EsconderGifs;
                 opcoes.EsconderOutrosCanais = EsconderOutrosCanais;
+                opcoes.EsconderAvisos = EsconderAvisos;
                 break;
             case Tipos.ChatOficial:
                 opcoes.BetterTtv = BetterTtv;
@@ -153,6 +158,7 @@ public sealed partial class LogicaChat : LogicaDaPagina
         estado["Chat.EsconderBots"] = EsconderBots.ToString();
         estado["Chat.EsconderGifs"] = EsconderGifs.ToString();
         estado["Chat.EsconderOutrosCanais"] = EsconderOutrosCanais.ToString();
+        estado["Chat.EsconderAvisos"] = EsconderAvisos.ToString();
         estado["Chat.BetterTtv"] = BetterTtv.ToString();
         estado["Chat.MenuDeEmotesDoBetterTtv"] = MenuDeEmotesDoBetterTtv.ToString();
         estado["Chat.Emotes7tv"] = Emotes7tv.ToString();

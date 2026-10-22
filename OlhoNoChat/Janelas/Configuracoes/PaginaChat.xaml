@@ -159,6 +159,21 @@
                             <ctl:Interruptor x:Name="interruptorEsconderOutrosCanais" Grid.Column="2" IsChecked="{Binding EsconderOutrosCanais}"
                                              AutomationProperties.Name="Esconder mensagens de outros canais" />
                         </Grid>
+                        <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="&#xE789;" Style="{DynamicResource IconeDoCartao}" />
+                            <StackPanel Grid.Column="1" Style="{DynamicResource TextoDaLinha}">
+                                <TextBlock Text="Esconder avisos" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Inscrições, presentes, raids, comunicados e sequências de visualizações da Twitch, e os novos membros do YouTube." Style="{DynamicResource Dica}" />
+                            </StackPanel>
+                            <ctl:Interruptor x:Name="interruptorEsconderAvisos" Grid.Column="2" IsChecked="{Binding EsconderAvisos}"
+                                             AutomationProperties.Name="Esconder avisos" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 

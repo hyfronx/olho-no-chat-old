@@ -68,20 +68,31 @@ public class MensagemParaAPaginaTestes
         Assert.Equal("#1E88E5", m.SuperChat!.Cor); // sem cor ou cor estranha: azul do YouTube
     }
 
+    // Os valores destacados ({ value }) entre colchetes
     [Theory]
     [InlineData(TipoDeEventoDeMembro.Novo, null, null, null, "virou membro do canal!")]
     [InlineData(TipoDeEventoDeMembro.Subiu, null, null, null, "subiu de nível como membro!")]
-    [InlineData(TipoDeEventoDeMembro.Marco, 1, null, null, "é membro há 1 mês!")]
-    [InlineData(TipoDeEventoDeMembro.Marco, 12, null, null, "é membro há 12 meses!")]
-    [InlineData(TipoDeEventoDeMembro.DeuPresente, null, 5, null, "deu 5 assinaturas de membro!")]
+    [InlineData(TipoDeEventoDeMembro.Marco, 1, null, null, "é membro há [1] mês!")]
+    [InlineData(TipoDeEventoDeMembro.Marco, 12, null, null, "é membro há [12] meses!")]
+    [InlineData(TipoDeEventoDeMembro.DeuPresente, null, 5, null, "deu [5] assinaturas de membro!")]
     [InlineData(TipoDeEventoDeMembro.DeuPresente, null, 1, null, "deu uma assinatura de membro!")]
-    [InlineData(TipoDeEventoDeMembro.GanhouPresente, null, null, "@viewer2", "ganhou uma assinatura de membro de @viewer2!")]
+    [InlineData(TipoDeEventoDeMembro.GanhouPresente, null, null, "@viewer2", "ganhou uma assinatura de membro de [@viewer2]!")]
     [InlineData(TipoDeEventoDeMembro.GanhouPresente, null, null, null, "ganhou uma assinatura de membro!")]
     public void Membros_AvisoEmPortugues(TipoDeEventoDeMembro tipo, int? meses, int? presentes, string? quemDeu, string aviso)
     {
         ItemDoChat item = Item() with { Membro = new EventoDeMembro(tipo, meses, presentes, quemDeu) };
 
-        Assert.Equal(aviso, MensagemParaAPagina.De(item)!.Aviso);
+        Assert.Equal(aviso, string.Concat(MensagemParaAPagina.De(item)!.Aviso!.Select(parte =>
+            parte as string ?? "[" + JsonSerializer.SerializeToElement(parte).GetProperty("value").GetString() + "]")));
+    }
+
+    [Fact]
+    public void ParaAPagina_AvisoComOValorAParte()
+    {
+        ItemDoChat item = Item() with { Membro = new EventoDeMembro(TipoDeEventoDeMembro.Marco, Meses: 12) };
+        string script = ContratoComAPagina.AdicionarDoYouTube(MensagemParaAPagina.De(item)!);
+
+        Assert.Contains("\"notice\":[\"\\u00E9 membro h\\u00E1 \",{\"value\":\"12\"},\" meses!\"]", script);
     }
 
     [Fact]

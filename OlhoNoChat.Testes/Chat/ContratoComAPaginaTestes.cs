@@ -13,7 +13,7 @@ public sealed class ContratoComAPaginaTestes
     public void JsonDeConfiguracoes_PadraoDaPrimeiraInstalacao_Exato()
     {
         Assert.Equal(
-            """{"fade":0,"hideBots":true,"hideGifs":false,"hideOtherChannels":false,"highlightUsers":false,"allowedUsersOnly":false,"playSound":true,"filterAllowAllVIPs":false,"filterAllowAllMods":false,"vips":[],"blockList":[],"multiplatform":false,"kick":""}""",
+            """{"fade":0,"hideBots":true,"hideGifs":false,"hideOtherChannels":false,"hideNotices":false,"highlightUsers":false,"allowedUsersOnly":false,"playSound":true,"filterAllowAllVIPs":false,"filterAllowAllMods":false,"vips":[],"blockList":[],"multiplatform":false,"kick":""}""",
             ContratoComAPagina.JsonDeConfiguracoes(new Opcoes()));
     }
 
@@ -27,6 +27,7 @@ public sealed class ContratoComAPaginaTestes
             EsconderBots = false,
             EsconderGifs = true,
             EsconderOutrosCanais = true,
+            EsconderAvisos = true,
             DestacarUsuarios = true,
             SoUsuariosDaLista = true,
             SomDeMensagem = "NONE",
@@ -37,7 +38,7 @@ public sealed class ContratoComAPaginaTestes
         };
 
         Assert.Equal(
-            """{"fade":45,"hideBots":false,"hideGifs":true,"hideOtherChannels":true,"highlightUsers":true,"allowedUsersOnly":true,"playSound":false,"filterAllowAllVIPs":true,"filterAllowAllMods":true,"vips":["fulano","beltrano"],"blockList":["nightbot"],"multiplatform":false,"kick":""}""",
+            """{"fade":45,"hideBots":false,"hideGifs":true,"hideOtherChannels":true,"hideNotices":true,"highlightUsers":true,"allowedUsersOnly":true,"playSound":false,"filterAllowAllVIPs":true,"filterAllowAllMods":true,"vips":["fulano","beltrano"],"blockList":["nightbot"],"multiplatform":false,"kick":""}""",
             ContratoComAPagina.JsonDeConfiguracoes(opcoes));
     }
 

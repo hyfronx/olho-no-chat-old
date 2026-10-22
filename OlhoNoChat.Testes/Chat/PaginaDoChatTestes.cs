@@ -144,6 +144,7 @@ public sealed class PaginaDoChatTestes
             o.EsconderBots = false;
             o.EsconderGifs = true;
             o.EsconderOutrosCanais = true;
+            o.EsconderAvisos = true;
             o.ApagarMensagensAntigas = true;
             o.DestacarUsuarios = true;
             o.ListaDeUsuarios.Add("fulano");

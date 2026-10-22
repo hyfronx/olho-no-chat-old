@@ -32,6 +32,7 @@ public static class ContratoComAPagina
             hideBots = opcoes.EsconderBots,
             hideGifs = opcoes.EsconderGifs,
             hideOtherChannels = opcoes.EsconderOutrosCanais,
+            hideNotices = opcoes.EsconderAvisos,
             highlightUsers = opcoes.DestacarUsuarios,
             allowedUsersOnly = opcoes.SoUsuariosDaLista,
             playSound = !string.Equals(opcoes.SomDeMensagem, "none", StringComparison.OrdinalIgnoreCase),

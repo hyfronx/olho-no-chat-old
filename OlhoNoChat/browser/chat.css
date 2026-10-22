@@ -145,9 +145,60 @@ body.onc-multi .onc-platform {
     letter-spacing: 0;
 }
 
-/* YouTube members: "virou membro do canal!" in YouTube's member green */
+/* Notices (subs, raids and watch streaks on Twitch, "virou membro do canal!" on YouTube): a bar in the platform's
+   color and a dark background lightly tinted with it, so they stand out without shouting on the dark chat; the
+   notice in italics, not bold, in a soft gray, its values (numbers, names) bold in a light tone of the color, the
+   viewer's message on its own line.
+   The highlight of the filters (the app's CSS, !important) wins over the background. */
+.onc-notice-twitch { --notice-color: #9146FF; }
+.onc-notice-youtube { --notice-color: #FF0000; }
+
+/* A small gap keeps two notices in a row apart */
+.chat_line.onc-notice-line {
+    position: relative;
+    margin-top: 3px;
+    margin-bottom: 3px;
+    padding-left: 9px !important;
+    padding-right: 6px !important;
+    background: color-mix(in srgb, var(--notice-color) 12%, rgb(20 20 26 / .8));
+}
+
+.onc-notice-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--notice-color);
+}
+
+/* A notice of another channel of a shared chat keeps the bar in that channel's color */
+.onc-notice-line.onc-other-channel::before {
+    background: var(--source-color);
+}
+
 .onc-notice {
-    color: #5FD07A;
+    font-weight: normal;
+    font-style: italic;
+    color: #CFCAD9;
+}
+
+.onc-notice-value {
+    font-weight: bold;
+    color: color-mix(in srgb, var(--notice-color) 45%, #fff);
+}
+
+/* !important: the app's CSS keeps every .message inline (CssDoChat) */
+.onc-notice-line .message {
+    display: block !important;
+}
+
+/* Channel point redemptions (oncChat.addAction): like a /me line, with the text not bold and in italics, like the
+   notices */
+.onc-redemption .message {
+    font-weight: normal;
+    font-style: italic;
 }
 
 /* "Esconder GIFs": the title in brackets instead (chat.js, showOrHideGifs) */

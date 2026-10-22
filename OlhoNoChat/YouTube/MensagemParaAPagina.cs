@@ -6,7 +6,8 @@ namespace OlhoNoChat.YouTube;
 /// <summary>
 /// Uma mensagem do chat do YouTube no formato que a página do Padrão entende (<c>oncChat.addYouTube</c>, ver
 /// browser/chat.js). <see cref="Partes"/> tem textos e emojis próprios do canal como
-/// <c>{ emote: { src }, name }</c>, igual aos emotes das mensagens da Twitch.
+/// <c>{ emote: { src }, name }</c>, igual aos emotes das mensagens da Twitch. <see cref="Aviso"/> tem textos e os
+/// valores que mudam (meses, quantas, quem deu) como <c>{ value }</c>, que a página destaca, igual aos avisos da Twitch.
 /// </summary>
 public sealed partial record MensagemParaAPagina(
     string Id,
@@ -15,7 +16,7 @@ public sealed partial record MensagemParaAPagina(
     string Papel,
     IReadOnlyList<object> Partes,
     SuperChatParaAPagina? SuperChat,
-    string? Aviso)
+    IReadOnlyList<object>? Aviso)
 {
     /// <summary>O dono do canal, um moderador, um membro, ou "" para os outros.</summary>
     public const string Dono = "owner", Moderador = "moderator", Membro = "member";
@@ -44,7 +45,7 @@ public sealed partial record MensagemParaAPagina(
         SuperChatParaAPagina? superChat = item.SuperChat is { } sc
             ? new SuperChatParaAPagina(sc.Valor, CorHex().IsMatch(sc.Cor ?? string.Empty) ? "#" + sc.Cor : "#1E88E5")
             : null;
-        string? aviso = item.Membro is { } membro ? AvisoDeMembro(membro) : null;
+        IReadOnlyList<object>? aviso = item.Membro is { } membro ? AvisoDeMembro(membro) : null;
 
         if (partes.Count == 0 && superChat == null && aviso == null)
             return null;
@@ -75,20 +76,22 @@ public sealed partial record MensagemParaAPagina(
         return partes;
     }
 
-    private static string AvisoDeMembro(EventoDeMembro membro) => membro.Tipo switch
+    private static object[] AvisoDeMembro(EventoDeMembro membro) => membro.Tipo switch
     {
-        TipoDeEventoDeMembro.Novo => "virou membro do canal!",
-        TipoDeEventoDeMembro.Subiu => "subiu de nível como membro!",
+        TipoDeEventoDeMembro.Novo => ["virou membro do canal!"],
+        TipoDeEventoDeMembro.Subiu => ["subiu de nível como membro!"],
         TipoDeEventoDeMembro.Marco => membro.Meses is int meses and > 0
-            ? $"é membro há {meses} {(meses == 1 ? "mês" : "meses")}!"
-            : "comemora mais um tempo como membro!",
+            ? ["é membro há ", Valor(meses), meses == 1 ? " mês!" : " meses!"]
+            : ["comemora mais um tempo como membro!"],
         TipoDeEventoDeMembro.DeuPresente => membro.Presentes is int quantas and > 1
-            ? $"deu {quantas} assinaturas de membro!"
-            : "deu uma assinatura de membro!",
+            ? ["deu ", Valor(quantas), " assinaturas de membro!"]
+            : ["deu uma assinatura de membro!"],
         _ => string.IsNullOrWhiteSpace(membro.QuemDeu) // GanhouPresente
-            ? "ganhou uma assinatura de membro!"
-            : $"ganhou uma assinatura de membro de {membro.QuemDeu.Trim()}!",
+            ? ["ganhou uma assinatura de membro!"]
+            : ["ganhou uma assinatura de membro de ", Valor(membro.QuemDeu.Trim()), "!"],
     };
+
+    private static object Valor(object valor) => new { value = valor.ToString() };
 }
 
 /// <summary>Um Super Chat: o valor como o YouTube escreve ("R$ 10,00") e a cor dele.</summary>

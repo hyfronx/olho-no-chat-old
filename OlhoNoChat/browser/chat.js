@@ -24,7 +24,7 @@
 
     // From the app (PadraoChat.GetMessageSettingsJson)
     let settings = {
-        fade: 0, hideBots: true, hideGifs: false, hideOtherChannels: false, playSound: false,
+        fade: 0, hideBots: true, hideGifs: false, hideOtherChannels: false, hideNotices: false, playSound: false,
         highlightUsers: false, allowedUsersOnly: false, filterAllowAllVIPs: false, filterAllowAllMods: false,
         vips: [], blockList: [], multiplatform: false, kick: ''
     };
@@ -131,8 +131,10 @@
                 if (message.tags['room-id']) loadChannelEmotes(message.tags['room-id']);
                 break;
             case 'PRIVMSG':
+            case 'USERNOTICE':
                 if (heldMessages) heldMessages.push(message);
-                else onChatMessage(message);
+                else if (message.command === 'PRIVMSG') onChatMessage(message);
+                else onTwitchNotice(message);
                 break;
             case 'CLEARCHAT':
                 // A timeout or ban takes that user's messages out; without a user, /clear empties the chat
@@ -195,9 +197,8 @@
 
         if (settings.hideBots && (text[0] === '!' || /bot$/.test(login))) return;
 
-        // Shared chat: a message typed in another channel of the session
         const tags = message.tags;
-        const sourceRoom = tags['source-room-id'] && tags['source-room-id'] !== tags['room-id'] ? tags['source-room-id'] : '';
+        const sourceRoom = otherChannelRoom(tags);
         if (sourceRoom && settings.hideOtherChannels) return;
 
         let action = false;
@@ -207,15 +208,152 @@
             text = actionMatch[1];
         }
 
+        // The text of a channel point redemption: once only, if the app already showed it (see "Redemptions")
+        const name = tags['display-name'] || login;
+        const reward = tags['custom-reward-id'] ? { by: name.toLowerCase(), text: text.trim() } : null;
+        if (reward) {
+            const shown = unpairedRewardLine(reward, true);
+            if (shown) {
+                shown.dataset.paired = '';
+                return;
+            }
+        }
+
         showLine({
             id: tags.id,
             sourceRoom,
             login,
-            name: tags['display-name'] || login,
+            name,
             color: userColor(login, tags.color),
+            reward,
             action,
             parts: addOtherEmotes(splitAtPlaces(text, [...twitchEmotePlaces(tags.emotes), ...gifPlaces(tags.gifs)]))
         }, tags.badges || '');
+    }
+
+    // Shared chat: the channel a message or notice came from, when it is another channel of the session
+    function otherChannelRoom(tags) {
+        return tags['source-room-id'] && tags['source-room-id'] !== tags['room-id'] ? tags['source-room-id'] : '';
+    }
+
+    // --- Redemptions --------------------------------------------------------------------------------
+    // A channel point redemption whose reward asks for a text comes twice in the account's own channel: Twitch sends
+    // the text as a chat message (tag "custom-reward-id") and the app sends it under "resgatou ..." (addAction, from
+    // EventSub). It shows once, as the app's line, right under the redemption. Either can come first, so each one
+    // looks for its pair among the lines of the last 30 s (same viewer, same text); a line pairs only once. Without
+    // the app's lines (another channel, redemptions off) the chat message shows as always.
+
+    const REWARD_PAIR_MS = 30000;
+
+    // reward: { by: the viewer's name in lowercase (EventSub gives the display name), text }; appLine: look for the
+    // app's line (true) or the chat message (false)
+    function unpairedRewardLine(reward, appLine) {
+        const since = Date.now() - REWARD_PAIR_MS;
+        const selector = `.chat_line[data-reward-by="${CSS.escape(reward.by)}"]:not([data-paired])`;
+        return [...box.querySelectorAll(selector), ...newLines.querySelectorAll(selector)].find(line =>
+            line.dataset.reward === reward.text && line.classList.contains('onc-redemption') === appLine
+            && Number(line.dataset.timestamp) >= since);
+    }
+
+    // --- Twitch notices ------------------------------------------------------------------------------
+    // Subs, gifts, raids, announcements, watch streaks... come as USERNOTICE: the kind in "msg-id", the numbers in
+    // "msg-param-..." tags and, when the viewer wrote something with it, their message. Twitch's own text
+    // ("system-msg") is always in English: the line says it with the Portuguese words of the Twitch site, like the
+    // YouTube member notices. A kind not known here shows Twitch's text, so nothing goes missing.
+
+    const ANONYMOUS_GIFTER = 'ananonymousgifter';
+
+    function onTwitchNotice(message) {
+        if (settings.hideNotices || message.params[0] !== '#' + channel) return;
+        const tags = message.tags;
+        // In a shared chat, a notice of another channel of the session says in "source-msg-id" what it was
+        const kind = tags['msg-id'] === 'sharedchatnotice' ? tags['source-msg-id'] : tags['msg-id'];
+        // A cancelled raid only matters to the channel that started it
+        if (kind === 'unraid') return;
+        // Each sub of a "gifting 5 subs to the community" comes too: the line of the whole gift is enough
+        if (kind === 'subgift' && tags['msg-param-community-gift-id']) return;
+
+        const login = tags.login || '';
+        const text = message.params[1] || '';
+        const notice = login && noticeText(kind, tags);
+        if (!notice) return;
+        // Bots make announcements too (Nightbot timers)
+        if (settings.hideBots && kind === 'announcement' && (text[0] === '!' || /bot$/.test(login))) return;
+        const sourceRoom = otherChannelRoom(tags);
+        if (sourceRoom && settings.hideOtherChannels) return;
+
+        showLine({
+            id: tags.id,
+            sourceRoom,
+            login,
+            name: login === ANONYMOUS_GIFTER ? 'Anônimo' : tags['display-name'] || login,
+            color: userColor(login, tags.color),
+            action: false,
+            parts: addOtherEmotes(splitAtPlaces(text, twitchEmotePlaces(tags.emotes))),
+            notice
+        }, tags.badges || '');
+    }
+
+    // What the line says after the name, as the Twitch site says it in Portuguese: texts, and the values that change
+    // (numbers, names, the plan) as { value }, which stand out (see addLine)
+    function noticeText(kind, tags) {
+        const param = name => tags['msg-param-' + name] || '';
+        const count = name => Number(param(name)) || 0;
+        const value = v => ({ value: String(v) });
+        const word = (n, one, many) => n === 1 ? one : many;
+        const tier = { 1000: 1, 2000: 2, 3000: 3 }[param('sub-plan')];
+        const plan = param('sub-plan') === 'Prime' ? [' com o ', value('Prime')] : tier ? [' no ', value('Grupo ' + tier)] : [];
+
+        switch (kind) {
+            case 'sub': {
+                const advance = count('multimonth-duration');
+                return ['se inscreveu', ...plan, ...(advance > 1 ? [' com ', value(advance), ' meses de antecedência!'] : ['!'])];
+            }
+            case 'resub': {
+                const months = count('cumulative-months');
+                return ['se inscreveu', ...plan,
+                    ...(months > 0 ? ['. A inscrição completou ', value(months), word(months, ' mês!', ' meses!')] : ['!'])];
+            }
+            case 'subgift': {
+                const recipient = value(param('recipient-display-name') || param('recipient-user-name'));
+                const months = count('gift-months');
+                if (months > 1) return ['deu ', value(months), ' meses de presente para ', recipient, '!'];
+                return ['deu uma inscrição', ...(tier > 1 ? [' do ', value('Grupo ' + tier)] : []), ' de presente para ', recipient, '!'];
+            }
+            case 'submysterygift': {
+                const gifts = count('mass-gift-count');
+                return ['está dando ', value(gifts), word(gifts, ' inscrição', ' inscrições') + ' de presente para a comunidade!'];
+            }
+            case 'giftpaidupgrade':
+                return ['deu continuidade à inscrição de presente que recebeu de ', value(param('sender-name') || param('sender-login')), '!'];
+            case 'anongiftpaidupgrade':
+                return ['deu continuidade à inscrição de presente que recebeu de um usuário anônimo!'];
+            case 'primepaidupgrade':
+                return ['converteu a inscrição Prime para uma inscrição paga!'];
+            case 'standardpayforward':
+            case 'communitypayforward': {
+                const from = param('prior-gifter-anonymous') === 'true'
+                    ? 'um presenteador anônimo' : value(param('prior-gifter-display-name') || param('prior-gifter-user-name'));
+                const to = kind === 'standardpayforward' && (param('recipient-display-name') || param('recipient-user-name'));
+                return ['retribuiu o presente que recebeu de ', from, ' e presenteou ', to ? value(to) : 'a comunidade', '!'];
+            }
+            case 'raid':
+                return ['está fazendo uma raid com um grupo de ', value(count('viewerCount')), '.'];
+            case 'announcement':
+                return ['fez um comunicado:'];
+            case 'bitsbadgetier':
+                return ['conquistou um novo distintivo de ', value(count('threshold')), ' Bits!'];
+            case 'viewermilestone':
+                if (param('category') === 'watch-streak') {
+                    const streams = count('value');
+                    return ['está com uma sequência de ', value(streams), word(streams, ' transmissão!', ' transmissões!')];
+                }
+                break;
+        }
+        // Twitch's text, without the name the line already starts with
+        const system = tags['system-msg'] || '';
+        const name = tags['display-name'] || tags.login || '';
+        return name && system.toLowerCase().startsWith(name.toLowerCase() + ' ') ? system.slice(name.length + 1) : system;
     }
 
     // --- Badges --------------------------------------------------------------------------------------
@@ -466,7 +604,7 @@
         if (!heldMessages) return;
         const messages = heldMessages;
         heldMessages = null;
-        messages.forEach(onChatMessage);
+        messages.forEach(handleLine);
     }
 
     function findEmote(word) {
@@ -542,6 +680,12 @@
         const div = document.createElement('div');
         div.className = 'chat_line';
         if (line.highlight) div.classList.add(line.highlight);
+        if (line.redemption) div.classList.add('onc-redemption');
+        if (line.reward) {
+            div.dataset.rewardBy = line.reward.by;
+            div.dataset.reward = line.reward.text;
+            if (line.reward.paired) div.dataset.paired = '';
+        }
         if (line.id) div.dataset.id = line.id;
         div.dataset.nick = line.login;
         div.dataset.timestamp = Date.now();
@@ -610,12 +754,22 @@
             div.append(badges);
         }
         div.append(nick);
-        // YouTube: a new member, a milestone or a gift ("virou membro do canal!"), then the message if there is one
+        // A notice ("virou membro do canal!" on YouTube, a sub or a raid on Twitch) in the platform's color, then the
+        // message if there is one (on its own line, see chat.css). Its values ({ value }) stand out.
         if (line.notice) {
             const notice = document.createElement('span');
             notice.className = 'onc-notice';
-            notice.textContent = line.notice;
-            div.classList.add('onc-member-line');
+            [].concat(line.notice).forEach(part => {
+                if (typeof part === 'string') {
+                    notice.append(part);
+                    return;
+                }
+                const value = document.createElement('span');
+                value.className = 'onc-notice-value';
+                value.textContent = part.value;
+                notice.append(value);
+            });
+            div.classList.add('onc-notice-line', 'onc-notice-' + (line.platform || 'twitch'));
             div.append(' ', notice);
         } else if (!line.action) {
             const colon = document.createElement('span');
@@ -800,6 +954,7 @@
     function onYouTubeMessage(m) {
         const login = String(m.login || m.name || '').toLowerCase();
         const text = (m.parts || []).filter(part => typeof part === 'string').join('').trim();
+        if (m.notice && settings.hideNotices) return;
         if (settings.hideBots && !m.superchat && !m.notice && (text[0] === '!' || /bot$/.test(login))) return;
 
         showLine({
@@ -1041,6 +1196,7 @@
             showOrHideGifs();
             showPlatforms();
             if (settings.hideOtherChannels) removeLines('.onc-other-channel');
+            if (settings.hideNotices) removeLines('.onc-notice-line');
             if (!settings.multiplatform) removeLines('.chat_line[data-id^="yt-"], .chat_line[data-id^="kick-"]');
             updateKick();
         },
@@ -1051,10 +1207,17 @@
             onYouTubeMessage(message);
         },
 
-        // A line from the app in the user's color, like a /me message (channel point redemptions)
+        // A line from the app in the user's color, like a /me message (channel point redemptions). The same text
+        // already shown as a chat message is taken out (see "Redemptions").
         addAction(name, color, text) {
             const login = name.toLowerCase();
-            showLine({ login, name, color: userColor(login, color), action: true, parts: addOtherEmotes([text]) }, '');
+            const reward = { by: login, text: text.trim() };
+            const chatMessage = unpairedRewardLine(reward, false);
+            if (chatMessage) {
+                chatMessage.remove();
+                reward.paired = true;
+            }
+            showLine({ login, name, color: userColor(login, color), action: true, redemption: true, reward, parts: addOtherEmotes([text]) }, '');
         },
 
         // For the app's watchdog: "open:<ms since Twitch last sent something>" or the state

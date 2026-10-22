@@ -51,6 +51,8 @@ public sealed class Opcoes
     public bool EsconderBots { get; set; } = true;
     public bool EsconderGifs { get; set; } = false;
     public bool EsconderOutrosCanais { get; set; } = false;
+    /// <summary>Os avisos no chat Padrão: inscrições, presentes, raids, sequências... da Twitch e os de membro do YouTube.</summary>
+    public bool EsconderAvisos { get; set; } = false;
     // Extensões de emotes do "Chat oficial da Twitch"
     public bool BetterTtv { get; set; } = true;
     public bool Emotes7tv { get; set; } = true;

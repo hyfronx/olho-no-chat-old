@@ -60,6 +60,7 @@ public sealed class LogicaConfiguracoesTestes : IDisposable
         c.Chat.EsconderBots = false;
         c.Chat.EsconderGifs = true;
         c.Chat.EsconderOutrosCanais = true;
+        c.Chat.EsconderAvisos = true;
         c.Chat.BetterTtv = false;
         c.Chat.MenuDeEmotesDoBetterTtv = false;
         c.Chat.Emotes7tv = false;
@@ -175,6 +176,7 @@ public sealed class LogicaConfiguracoesTestes : IDisposable
         Assert.False(o.EsconderBots);
         Assert.True(o.EsconderGifs);
         Assert.True(o.EsconderOutrosCanais);
+        Assert.True(o.EsconderAvisos);
         Assert.Equal(Opcoes.TemaNenhum, o.Tema);
         Assert.Equal("#chat_box { color: red; }", o.CssDoTemaNenhum);
         Assert.Equal("#A8DCFF", o.CorDoTexto);
