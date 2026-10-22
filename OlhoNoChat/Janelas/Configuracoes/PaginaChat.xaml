@@ -124,7 +124,7 @@
                             <StackPanel Grid.Column="1" Style="{DynamicResource TextoDaLinha}">
                                 <TextBlock Text="Esconder bots e comandos" Style="{DynamicResource Rotulo}" />
                                 <TextBlock Style="{DynamicResource Dica}"
-                                           Text="Esconde usuários com nome terminado em &quot;bot&quot; (Nightbot, Moobot...) e mensagens que começam com &quot;!&quot;." />
+                                           Text="Esconde os robôs do chat (Nightbot, StreamElements, Moobot...) e as mensagens que começam com &quot;!&quot;. Na Twitch, os robôs são reconhecidos pelo selo de robô e pela lista da FrankerFaceZ; no YouTube e na Kick, pelo nome terminado em &quot;bot&quot;." />
                             </StackPanel>
                             <ctl:Interruptor x:Name="interruptorEsconderBots" Grid.Column="2" IsChecked="{Binding EsconderBots}"
                                              AutomationProperties.Name="Esconder bots e comandos" />

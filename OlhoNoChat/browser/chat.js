@@ -194,10 +194,10 @@
         if (message.params[0] !== '#' + channel) return;
         const login = message.prefix.split('!')[0];
         let text = message.params[1] || '';
-
-        if (settings.hideBots && (text[0] === '!' || /bot$/.test(login))) return;
-
         const tags = message.tags;
+
+        if (settings.hideBots && (text[0] === '!' || isTwitchBot(login, tags.badges))) return;
+
         const sourceRoom = otherChannelRoom(tags);
         if (sourceRoom && settings.hideOtherChannels) return;
 
@@ -278,7 +278,7 @@
         const notice = login && noticeText(kind, tags);
         if (!notice) return;
         // Bots make announcements too (Nightbot timers)
-        if (settings.hideBots && kind === 'announcement' && (text[0] === '!' || /bot$/.test(login))) return;
+        if (settings.hideBots && kind === 'announcement' && (text[0] === '!' || isTwitchBot(login, tags.badges))) return;
         const sourceRoom = otherChannelRoom(tags);
         if (sourceRoom && settings.hideOtherChannels) return;
 
@@ -581,6 +581,21 @@
     loadEmotes('https://api.betterttv.net/3/cached/emotes/global', emoteSets.global[BTTV], d => d, bttvEmote);
     loadEmotes('https://api.betterttv.net/3/cached/frankerfacez/emotes/global', emoteSets.global[FFZ], d => d, ffzEmote);
 
+    // --- Bots ----------------------------------------------------------------------------------------
+    // "Esconder bots e comandos": on Twitch a bot is an account with Twitch's own "Chat Bot" badge (bot-badge, given to
+    // bots that send through the chat API) or one on FrankerFaceZ's public list of known bots (Nightbot,
+    // StreamElements, Moobot...). Not the name: a person can be called "...bot". YouTube and Kick have neither, so
+    // there the name ending in "bot" is still the sign.
+    const knownBots = new Set();
+    const knownBotsLoad = fetch('https://api.frankerfacez.com/v1/badge/bot')
+        .then(response => response.ok ? response.json() : null)
+        .then(data => Object.values((data && data.users) || {}).flat().forEach(login => knownBots.add(String(login).toLowerCase())))
+        .catch(e => console.warn('[ONC] Could not load the list of known bots', e));
+
+    function isTwitchBot(login, badges) {
+        return /(?:^|,)bot-badge\//.test(badges || '') || knownBots.has(login);
+    }
+
     // The chat's messages wait (up to 3 s) until the channel's emotes arrived, so the first ones get them too.
     // The channel id comes with the ROOMSTATE of the channel; its emotes are loaded once per page.
     let heldMessages = [];
@@ -597,7 +612,8 @@
                 d => d && (d.channelEmotes || []).concat(d.sharedEmotes || []), bttvEmote),
             loadEmotes('https://api.betterttv.net/3/cached/frankerfacez/users/twitch/' + id, emoteSets.channel[FFZ], d => d, ffzEmote)
         ];
-        Promise.race([Promise.all(loads), new Promise(resolve => setTimeout(resolve, 3000))]).then(releaseHeldMessages);
+        // The list of known bots too, so the first messages of a bot are hidden as well
+        Promise.race([Promise.all([...loads, knownBotsLoad]), new Promise(resolve => setTimeout(resolve, 3000))]).then(releaseHeldMessages);
     }
 
     function releaseHeldMessages() {
@@ -955,6 +971,7 @@
         const login = String(m.login || m.name || '').toLowerCase();
         const text = (m.parts || []).filter(part => typeof part === 'string').join('').trim();
         if (m.notice && settings.hideNotices) return;
+        // A bot by its name: YouTube marks no bots (see "Bots")
         if (settings.hideBots && !m.superchat && !m.notice && (text[0] === '!' || /bot$/.test(login))) return;
 
         showLine({
@@ -1148,6 +1165,7 @@
         const login = String(sender.username || sender.slug || '').toLowerCase();
         const text = String(m.content || '');
         if (!login || !text) return;
+        // A bot by its name: Kick marks no bots (see "Bots")
         if (settings.hideBots && (text[0] === '!' || /bot$/.test(login))) return;
 
         // Broadcaster, Mods and VIPs count for the filters; the subscriber badge is the channel's own picture
