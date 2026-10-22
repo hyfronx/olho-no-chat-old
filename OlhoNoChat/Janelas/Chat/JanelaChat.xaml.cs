@@ -96,6 +96,11 @@ public partial class JanelaChat : Window
         // "Atualizar agora": o Velopack fecha o app sem passar pelo Closing, então a posição vai para as opções antes
         _atualizacoes.AntesDeReiniciar = () => Opcoes.Janela = PosicaoAtual();
         _atualizacoes.ProcuraAutomaticaDesligada += () => _janelaDeConfiguracoes?.Logica.ProcuraAutomaticaDesligada();
+        _atualizacoes.EstadoMudou += () =>
+        {
+            if (_janelaDeConfiguracoes != null)
+                _janelaDeConfiguracoes.Logica.Geral.Procura = _atualizacoes.Estado;
+        };
 
         // Onde a janela estava (na primeira vez, o tamanho do XAML); nunca abre maximizada nem minimizada (decisão 18)
         Opcoes.Janela?.AplicarEm(this);
@@ -798,6 +803,8 @@ public partial class JanelaChat : Window
         var janela = new JanelaConfiguracoes(logica, this);
         _janelaDeConfiguracoes = janela;
         logica.ProcurarAtualizacoesPedido += () => _ = _atualizacoes.ProcurarAsync(manual: true, dono: janela);
+        // Uma procura que já está rodando (a da abertura do app, a do menu perto do relógio) também aparece no botão
+        logica.Geral.Procura = _atualizacoes.Estado;
 
         // Trocar de um tipo sem canal para um com canal mostra, depois, o aviso de que dá para escrever
         int tipoSalvo = Opcoes.TipoDeChat;

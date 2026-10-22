@@ -147,8 +147,40 @@
                             <Run Text="Versão atual:" />
                             <Run Text="{Binding Versao, Mode=OneWay}" Foreground="{DynamicResource Texto}" />
                         </TextBlock>
-                        <Button x:Name="botaoProcurarAgora" Grid.Column="1" Content="Procurar agora" MinWidth="130"
-                                Command="{Binding ProcurarAgoraCommand}" />
+                        <!-- Enquanto procura (ou baixa): o ícone gira, o texto diz o que está fazendo e o botão não aceita clique -->
+                        <Button x:Name="botaoProcurarAgora" Grid.Column="1" MinWidth="130" Command="{Binding ProcurarAgoraCommand}"
+                                AutomationProperties.Name="{Binding TextoDoProcurarAgora}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#xE895;" FontSize="14" Margin="0,1,8,0"
+                                           RenderTransformOrigin="0.5,0.5">
+                                    <TextBlock.RenderTransform>
+                                        <RotateTransform />
+                                    </TextBlock.RenderTransform>
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock" BasedOn="{StaticResource Icone}">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Procurando}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard x:Name="girar">
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="(TextBlock.RenderTransform).(RotateTransform.Angle)"
+                                                                                 From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever" />
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <StopStoryboard BeginStoryboardName="girar" />
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <TextBlock Text="{Binding TextoDoProcurarAgora}" />
+                            </StackPanel>
+                        </Button>
                     </Grid>
                 </StackPanel>
             </Border>

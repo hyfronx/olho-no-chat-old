@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using OlhoNoChat.Atalhos;
+using OlhoNoChat.Atualizacoes;
 using OlhoNoChat.Configuracoes;
 
 namespace OlhoNoChat.Janelas.Configuracoes;
@@ -47,8 +48,28 @@ public sealed partial class LogicaGeral : LogicaDaPagina
     /// <summary>A versão instalada, ou "de desenvolvimento".</summary>
     public string Versao => InfoDoApp.Versao;
 
-    [RelayCommand]
+    /// <summary>
+    /// A procura de atualizações em andamento (a janela do chat acompanha <see cref="ProcuraDeAtualizacoes.Estado"/>):
+    /// enquanto ela roda, "Procurar agora" gira, diz o que está fazendo e não aceita outro clique.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Procurando), nameof(TextoDoProcurarAgora))]
+    [NotifyCanExecuteChangedFor(nameof(ProcurarAgoraCommand))]
+    private EstadoDaProcura _procura;
+
+    public bool Procurando => Procura != EstadoDaProcura.Parada;
+
+    public string TextoDoProcurarAgora => Procura switch
+    {
+        EstadoDaProcura.Procurando => "Procurando…",
+        EstadoDaProcura.Baixando => "Baixando…",
+        _ => "Procurar agora",
+    };
+
+    [RelayCommand(CanExecute = nameof(PodeProcurar))]
     private void ProcurarAgora() => ProcurarAtualizacoesPedido?.Invoke();
+
+    private bool PodeProcurar() => !Procurando;
 
     [RelayCommand]
     private void Restaurar() => RestaurarPedido?.Invoke();

@@ -8,6 +8,15 @@ using Velopack.Sources;
 
 namespace OlhoNoChat.Atualizacoes;
 
+/// <summary>O que a procura de atualizações está fazendo agora (o botão "Procurar agora" da aba Geral mostra).</summary>
+public enum EstadoDaProcura
+{
+    Parada,
+    Procurando,
+    /// <summary>Depois de "Atualizar agora", até o app reiniciar.</summary>
+    Baixando,
+}
+
 /// <summary>
 /// Procura uma versão nova nas releases do GitHub, mostra a janela "Nova versão disponível" e, em "Atualizar agora",
 /// baixa, grava tudo e reinicia o app já atualizado (pelo Velopack).
@@ -23,7 +32,6 @@ public sealed class ProcuraDeAtualizacoes
     private readonly ILogger<ProcuraDeAtualizacoes> _log;
     private readonly Func<Opcoes> _opcoes;
     private readonly Func<bool> _gravar;
-    private bool _procurando;
     private Window? _janelaAberta;
 
     /// <param name="opcoes">As opções em uso ("Restaurar tudo para o padrão" troca o objeto).</param>
@@ -41,28 +49,40 @@ public sealed class ProcuraDeAtualizacoes
     /// <summary>Chamado logo antes do Velopack fechar o app para atualizar (a posição da janela do chat vai para as opções).</summary>
     public Action? AntesDeReiniciar { get; set; }
 
+    /// <summary>A procura em andamento, venha de onde vier (botão, menu perto do relógio ou abertura do app).</summary>
+    public EstadoDaProcura Estado { get; private set; }
+
+    /// <summary><see cref="Estado"/> mudou (sempre na thread da interface, de onde a procura é pedida).</summary>
+    public event Action? EstadoMudou;
+
     /// <summary>
     /// Procura agora. <paramref name="dono"/> é a janela de onde veio o pedido (Configurações), que fica atrás do aviso e
     /// das mensagens. Pedir de novo enquanto uma procura está em andamento só traz o aviso aberto para a frente.
     /// </summary>
     public async Task ProcurarAsync(bool manual, Window? dono)
     {
-        if (_procurando)
+        if (Estado != EstadoDaProcura.Parada)
         {
             _janelaAberta?.Activate();
             return;
         }
 
-        _procurando = true;
+        Mudar(EstadoDaProcura.Procurando);
         try
         {
             await ProcurarAgoraAsync(manual, dono);
         }
         finally
         {
-            _procurando = false;
+            Mudar(EstadoDaProcura.Parada);
             _janelaAberta = null;
         }
+    }
+
+    private void Mudar(EstadoDaProcura estado)
+    {
+        Estado = estado;
+        EstadoMudou?.Invoke();
     }
 
     private async Task ProcurarAgoraAsync(bool manual, Window? dono)
@@ -104,6 +124,7 @@ public sealed class ProcuraDeAtualizacoes
         try
         {
             _log.LogInformation("Baixando a versão {Versao}...", nova.TargetFullRelease.Version);
+            Mudar(EstadoDaProcura.Baixando);
             await gerenciador.DownloadUpdatesAsync(nova);
 
             // O Velopack fecha o app sem passar pela gravação normal da saída: tudo é gravado antes
