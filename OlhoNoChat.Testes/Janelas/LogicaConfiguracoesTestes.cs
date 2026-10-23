@@ -60,7 +60,12 @@ public sealed class LogicaConfiguracoesTestes : IDisposable
         c.Chat.EsconderBots = false;
         c.Chat.EsconderGifs = true;
         c.Chat.EsconderOutrosCanais = true;
-        c.Chat.EsconderAvisos = true;
+        c.Chat.MostrarAvisosDaTwitch = false;
+        c.Chat.MostrarAvisosDoYouTube = false;
+        c.Chat.MostrarPresentesDoTikTok = false;
+        c.Chat.MostrarSeguidoresDoTikTok = false;
+        c.Chat.MostrarCompartilhamentosDoTikTok = true;
+        c.Chat.MostrarSuperfasDoTikTok = false;
         c.Chat.BetterTtv = false;
         c.Chat.MenuDeEmotesDoBetterTtv = false;
         c.Chat.Emotes7tv = false;
@@ -176,7 +181,12 @@ public sealed class LogicaConfiguracoesTestes : IDisposable
         Assert.False(o.EsconderBots);
         Assert.True(o.EsconderGifs);
         Assert.True(o.EsconderOutrosCanais);
-        Assert.True(o.EsconderAvisos);
+        Assert.False(o.MostrarAvisosDaTwitch);
+        Assert.False(o.MostrarAvisosDoYouTube);
+        Assert.False(o.MostrarPresentesDoTikTok);
+        Assert.False(o.MostrarSeguidoresDoTikTok);
+        Assert.True(o.MostrarCompartilhamentosDoTikTok);
+        Assert.False(o.MostrarSuperfasDoTikTok);
         Assert.Equal(Opcoes.TemaNenhum, o.Tema);
         Assert.Equal("#chat_box { color: red; }", o.CssDoTemaNenhum);
         Assert.Equal("#A8DCFF", o.CorDoTexto);

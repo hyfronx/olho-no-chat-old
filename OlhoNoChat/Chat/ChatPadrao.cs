@@ -17,7 +17,7 @@ public sealed class ChatPadrao : PaginaDoChat
         _canal = canal;
     }
 
-    // Sem canal da Twitch (Chat Multiplataforma só com YouTube ou Kick): a faixa não tem o ponto da Twitch
+    // Sem canal da Twitch (Chat Multiplataforma só com YouTube, Kick ou TikTok): a faixa não tem o ponto da Twitch
     public override string? Canal => _canal.Length > 0 ? _canal : null;
 
     public override string Css(Opcoes opcoes) => CssDoChat.DoChatPadrao(opcoes);

@@ -59,7 +59,7 @@ public partial class BarraDeCima : UserControl
     /// <summary>O botão "Sempre no topo" foi clicado (ou trocado pela automação): o estado pedido.</summary>
     public event Action<bool>? SempreNoTopoPedido;
 
-    /// <summary>O botão do Chat Multiplataforma foi clicado: ligado (Twitch, YouTube e Kick) ou só a Twitch.</summary>
+    /// <summary>O botão do Chat Multiplataforma foi clicado: ligado (Twitch, YouTube, Kick e TikTok) ou só a Twitch.</summary>
     public event Action<bool>? MultiplataformaPedido;
 
     /// <summary>O botão Escrever foi clicado: a janela abre ou fecha a caixa e depois mostra o estado.</summary>
@@ -108,7 +108,7 @@ public partial class BarraDeCima : UserControl
         _mostrando = false;
         botaoMultiplataforma.ToolTip = ligado
             ? "Desativar Chat Multiplataforma (Beta)"
-            : "Ativar Chat Multiplataforma (Beta): Twitch, YouTube e Kick juntos, só para ler";
+            : "Ativar Chat Multiplataforma (Beta): Twitch, YouTube, Kick e TikTok juntos, só para ler";
     }
 
     /// <summary>O Escrever só existe nos tipos de chat com canal; aceso enquanto uma caixa está aberta.</summary>

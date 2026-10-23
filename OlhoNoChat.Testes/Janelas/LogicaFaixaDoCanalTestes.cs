@@ -1,6 +1,7 @@
 using OlhoNoChat.Configuracoes;
 using OlhoNoChat.Janelas.Chat;
 using OlhoNoChat.Kick;
+using OlhoNoChat.TikTok;
 using OlhoNoChat.YouTube;
 
 namespace OlhoNoChat.Testes.Janelas;
@@ -11,6 +12,7 @@ public class LogicaFaixaDoCanalTestes
     private readonly List<string> _trocas = [];
     private readonly List<string> _trocasDoYouTube = [];
     private readonly List<string> _trocasDaKick = [];
+    private readonly List<string> _trocasDoTikTok = [];
     private readonly List<string> _perguntados = [];
     private bool _conectada;
     private bool? _existe = true;
@@ -24,14 +26,16 @@ public class LogicaFaixaDoCanalTestes
                 _perguntados.Add(nome);
                 return Task.FromResult(_existe);
             },
-            (canal, youTube, kick) =>
+            (canal, youTube, kick, tikTok) =>
             {
                 _trocas.Add(canal);
                 _trocasDoYouTube.Add(youTube);
                 _trocasDaKick.Add(kick);
+                _trocasDoTikTok.Add(tikTok);
                 _opcoes.Canal = canal;
                 _opcoes.CanalDoYouTube = youTube;
                 _opcoes.CanalDaKick = kick;
+                _opcoes.CanalDoTikTok = tikTok;
             });
         logica.PedirFoco += selecionar => _focos.Add(selecionar);
         return logica;
@@ -162,7 +166,7 @@ public class LogicaFaixaDoCanalTestes
     {
         _conectada = true;
         var resposta = new TaskCompletionSource<bool?>();
-        var logica = new LogicaFaixaDoCanal(() => _opcoes, () => true, _ => resposta.Task, (canal, _, _) => _trocas.Add(canal));
+        var logica = new LogicaFaixaDoCanal(() => _opcoes, () => true, _ => resposta.Task, (canal, _, _, _) => _trocas.Add(canal));
         logica.AbrirEditor();
         logica.Texto = "outro";
 
@@ -435,6 +439,118 @@ public class LogicaFaixaDoCanalTestes
         Assert.Equal([""], _trocasDaKick);
         Assert.False(logica.KickNaFaixa);
     }
+    // --- Chat Multiplataforma: o canal do TikTok na mesma faixa -------------------------------------------
+
+    [Fact]
+    public void ComMultiplataforma_MostraOTikTokComOArrobaNaDica()
+    {
+        _opcoes.ChatMultiplataforma = true;
+        _opcoes.CanalDoTikTok = "fulano.live";
+        var logica = Nova();
+
+        Assert.True(logica.TikTokNaFaixa);
+        Assert.True(logica.OutrosCanaisNaFaixa);
+        Assert.True(logica.VariosCanaisNaFaixa); // com a Twitch
+        Assert.Equal("fulano.live", logica.TikTokSalvo);
+
+        logica.PaginaAvisou(EstadoDaConexao.Conectado);
+        logica.ConexaoDoTikTok = EstadoDoTikTok.Conectado;
+        Assert.Equal("Twitch: Conectado ao chat de hyfronx.\nTikTok: lendo o chat da live de @fulano.live.\nClique para trocar de canal.",
+            logica.DicaDaFaixa);
+
+        logica.ConexaoDoTikTok = EstadoDoTikTok.EsperandoALive;
+        Assert.Contains("TikTok: @fulano.live não está ao vivo. Esperando a live começar…", logica.DicaDaFaixa);
+        logica.ConexaoDoTikTok = EstadoDoTikTok.CanalNaoExiste;
+        Assert.Contains("TikTok: não achei o perfil @fulano.live no TikTok. Confira o nome.", logica.DicaDaFaixa);
+    }
+
+    [Fact]
+    public void SemMultiplataforma_OTikTokSalvoNaoAparece()
+    {
+        _opcoes.CanalDoTikTok = "fulano";
+        var logica = Nova();
+
+        Assert.False(logica.TikTokNaFaixa);
+        Assert.False(logica.OutrosCanaisNaFaixa);
+    }
+
+    [Fact]
+    public void CaixaDoTikTok_MostraOSalvoComArroba()
+    {
+        _opcoes.ChatMultiplataforma = true;
+        _opcoes.CanalDoTikTok = "fulano";
+        var logica = Nova();
+        logica.AbrirEditor();
+
+        Assert.Equal("@fulano", logica.TextoDoTikTok);
+    }
+
+    [Fact]
+    public async Task SoOTikTokTrocado_PeloLinkDaLive()
+    {
+        _opcoes.ChatMultiplataforma = true;
+        _conectada = true;
+        var logica = Nova();
+        logica.AbrirEditor();
+        logica.TextoDoTikTok = "https://www.tiktok.com/@Fulano_1/live?lang=pt-BR";
+
+        await logica.ConfirmarAsync();
+
+        Assert.Empty(_perguntados); // a Twitch não muda: não pergunta
+        Assert.Equal(["hyfronx"], _trocas);
+        Assert.Equal(["fulano_1"], _trocasDoTikTok);
+        Assert.False(logica.EditorAberto);
+    }
+
+    [Fact]
+    public async Task OMesmoTikTokComArroba_NaoTroca()
+    {
+        _opcoes.ChatMultiplataforma = true;
+        _opcoes.CanalDoTikTok = "fulano";
+        var logica = Nova();
+        logica.AbrirEditor();
+        logica.TextoDoTikTok = "@Fulano";
+
+        await logica.ConfirmarAsync();
+
+        Assert.Empty(_trocas);
+        Assert.False(logica.EditorAberto);
+    }
+
+    [Fact]
+    public async Task TikTokInvalido_MostraOErroEPedeOFocoNele()
+    {
+        _opcoes.ChatMultiplataforma = true;
+        var logica = Nova();
+        int focos = 0;
+        logica.PedirFocoNoTikTok += () => focos++;
+        logica.AbrirEditor();
+        logica.TextoDoTikTok = "vm.tiktok.com/ZMabc123";
+
+        await logica.ConfirmarAsync();
+
+        Assert.Equal(CanalDoTikTok.DicaInvalido, logica.Dica);
+        Assert.True(logica.DicaEhErro);
+        Assert.Equal(1, focos);
+        Assert.Empty(_trocas);
+    }
+
+    [Fact]
+    public async Task Multiplataforma_SemTwitch_ConectaSoOTikTok()
+    {
+        _opcoes.Canal = string.Empty;
+        _opcoes.ChatMultiplataforma = true;
+        var logica = Nova();
+        logica.TextoDoTikTok = "fulano";
+
+        await logica.ConfirmarAsync();
+
+        Assert.Equal([""], _trocas);
+        Assert.Equal(["fulano"], _trocasDoTikTok);
+        Assert.True(logica.TemCanal);
+        Assert.False(logica.VariosCanaisNaFaixa);
+    }
+
     // --- Chat Multiplataforma: a Twitch é opcional ----------------------------------------------------------
 
     [Fact]

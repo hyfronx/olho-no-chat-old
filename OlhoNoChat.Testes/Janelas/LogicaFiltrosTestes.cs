@@ -32,6 +32,8 @@ public class LogicaFiltrosTestes
     [InlineData("@Fatima-aslam-vlogs", "Fatima-aslam-vlogs")]
     [InlineData("meu.canal", "meu.canal")]
     [InlineData("https://www.youtube.com/@Outro.Canal/live", "Outro.Canal")]
+    // O @ do TikTok: o link do perfil ou da live (o TikTok não diferencia maiúsculas: entra em minúsculas)
+    [InlineData("https://www.tiktok.com/@Viewer_1/live", "viewer_1")]
     public void Adicionar_TiraONomeDoTextoGuardaAsMaiusculasELimpaACaixa(string digitado, string nome)
     {
         var logica = Nova(new Opcoes());

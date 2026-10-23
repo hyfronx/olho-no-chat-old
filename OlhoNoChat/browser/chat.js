@@ -1,6 +1,6 @@
 // The "Padrão" chat: reads the chat of a Twitch channel (anonymous IRC, read-only) and shows its messages.
-// Opened by the app as chat.html?canal=<name>&tema=padrao (an empty channel in the Chat Multiplataforma: only YouTube
-// and/or Kick, without Twitch); it connects when the app calls
+// Opened by the app as chat.html?canal=<name>&tema=padrao (an empty channel in the Chat Multiplataforma: only YouTube,
+// Kick and/or TikTok, without Twitch); it connects when the app calls
 // window.oncChat.start(settings), so the settings already apply to the first message.
 (function () {
     'use strict';
@@ -24,7 +24,8 @@
 
     // From the app (PadraoChat.GetMessageSettingsJson)
     let settings = {
-        fade: 0, hideBots: true, hideGifs: false, hideOtherChannels: false, hideNotices: false, playSound: false,
+        fade: 0, hideBots: true, hideGifs: false, hideOtherChannels: false, playSound: false,
+        twitchNotices: true, youTubeNotices: true, tiktokGifts: true, tiktokFollows: true, tiktokShares: false, tiktokSuperFans: true,
         highlightUsers: false, allowedUsersOnly: false, filterAllowAllVIPs: false, filterAllowAllMods: false,
         vips: [], blockList: [], multiplatform: false, kick: ''
     };
@@ -168,7 +169,6 @@
     pillDot.className = 'onc-dot';
     const pillText = document.createElement('span');
     pill.append(pillDot, pillText);
-    if (channel) document.body.appendChild(pill);
     let pillFadeTimer = null;
 
     const stateTexts = {
@@ -181,11 +181,67 @@
     function setState(newState) {
         if (newState === state) return;
         state = newState;
-        pill.className = newState;
-        pillText.textContent = stateTexts[newState];
-        clearTimeout(pillFadeTimer);
-        if (newState === 'connected') pillFadeTimer = setTimeout(() => pill.classList.add('faded'), 4000);
         postToApp('onc:chat-state:' + (newState === 'unavailable' ? 'disconnected' : newState));
+        if (settings.multiplatform) {
+            setPlatformState('twitch', newState === 'unavailable' ? 'notfound' : newState === 'disconnected' ? 'failed' : newState);
+            return;
+        }
+        showPill(newState, stateTexts[newState], newState === 'connected' ? 4000 : 0);
+    }
+
+    function showPill(className, text, fadeAfterMs) {
+        if (!pill.isConnected) document.body.appendChild(pill);
+        pill.className = className;
+        pillText.textContent = text;
+        clearTimeout(pillFadeTimer);
+        if (fadeAfterMs) pillFadeTimer = setTimeout(() => pill.classList.add('faded'), fadeAfterMs);
+    }
+
+    // Chat Multiplataforma: one pill for all the chats in use, not only Twitch's. Twitch and Kick are read here; the app
+    // tells the YouTube and TikTok states (oncChat.platformState). Each one is connecting, connected, waiting (YouTube
+    // and TikTok: the channel isn't live), failed (no connection, trying again), notfound or off.
+    const PLATFORM_NAMES = { twitch: 'Twitch', youtube: 'YouTube', kick: 'Kick', tiktok: 'TikTok' };
+    const PLATFORM_PROBLEMS = { waiting: 'esperando a live', failed: 'sem conexão', notfound: 'canal não encontrado' };
+    const platformStates = {};
+    let multiPillText = '';
+
+    function setPlatformState(platform, newState) {
+        platformStates[platform] = newState;
+        showMultiPill();
+    }
+
+    function showMultiPill() {
+        if (!settings.multiplatform) return;
+        const used = Object.keys(PLATFORM_NAMES).filter(p => platformStates[p] && platformStates[p] !== 'off');
+        if (!used.length) {
+            pill.remove();
+            multiPillText = '';
+            return;
+        }
+        const connected = used.filter(p => platformStates[p] === 'connected').length;
+        const problems = used.filter(p => PLATFORM_PROBLEMS[platformStates[p]]);
+        let className, text, fadeAfterMs;
+        if (used.some(p => platformStates[p] === 'connecting')) {
+            className = 'connecting';
+            text = used.length === 1 ? 'Conectando ao chat…' : 'Conectando aos chats…';
+            fadeAfterMs = 0;
+        } else if (!problems.length) {
+            className = 'connected';
+            text = used.length === 1 ? 'Conectado ao chat' : `Conectado aos ${used.length} chats`;
+            fadeAfterMs = 4000;
+        } else {
+            // Waiting for a live isn't a failure: gray; a lost or wrong channel: red. It stays a while, then the dots
+            // of the channel strip keep telling it
+            className = problems.some(p => platformStates[p] !== 'waiting') ? 'disconnected' : 'waiting';
+            const parts = problems.map(p => PLATFORM_NAMES[p] + ': ' + PLATFORM_PROBLEMS[platformStates[p]]);
+            if (connected) parts.unshift(`Conectado a ${connected} de ${used.length} chats`);
+            text = parts.join(' · ');
+            fadeAfterMs = 10000;
+        }
+        // The same text again (a state that didn't change for the pill) doesn't show the pill again
+        if (text === multiPillText && pill.className.split(' ')[0] === className) return;
+        multiPillText = text;
+        showPill(className + ' multi', text, fadeAfterMs);
     }
 
     // --- Messages ------------------------------------------------------------------------------------
@@ -264,7 +320,7 @@
     const ANONYMOUS_GIFTER = 'ananonymousgifter';
 
     function onTwitchNotice(message) {
-        if (settings.hideNotices || message.params[0] !== '#' + channel) return;
+        if (!settings.twitchNotices || message.params[0] !== '#' + channel) return;
         const tags = message.tags;
         // In a shared chat, a notice of another channel of the session says in "source-msg-id" what it was
         const kind = tags['msg-id'] === 'sharedchatnotice' ? tags['source-msg-id'] : tags['msg-id'];
@@ -691,6 +747,15 @@
         return readable;
     }
 
+    // A name with something to see: not only spaces, invisible characters (zero width, unassigned like U+FFF4) or blank
+    // letters (the Hangul filler ㅤ, the empty Braille cell). Some TikTok nicknames are made of these on purpose.
+    const VISIBLE = /[^\p{White_Space}\p{Cc}\p{Cf}\p{Cn}\p{M}ᅟᅠㅤﾠ⠀]/u;
+
+    // The name shown: an invisible one gives way to the login (the @ on TikTok and YouTube)
+    function shownName(line) {
+        return VISIBLE.test(line.name || '') || !line.login ? line.name : line.login;
+    }
+
     // One chat line: time, name, ":" and the message (a /me message has no ":" and is in the user's color)
     function addLine(line) {
         const div = document.createElement('div');
@@ -714,7 +779,7 @@
         const nick = document.createElement('span');
         nick.className = 'nick';
         nick.style.color = line.color;
-        nick.textContent = line.name;
+        nick.textContent = shownName(line);
 
         const message = document.createElement('span');
         message.className = 'message';
@@ -751,7 +816,7 @@
         // Chat Multiplataforma: where the message came from (hidden by CSS while it is off, see showPlatforms)
         const platform = document.createElement('span');
         platform.className = 'onc-platform ' + (line.platform || 'twitch');
-        platform.title = { youtube: 'YouTube', kick: 'Kick' }[line.platform] || 'Twitch';
+        platform.title = { youtube: 'YouTube', kick: 'Kick', tiktok: 'TikTok' }[line.platform] || 'Twitch';
         div.append(platform);
         if (line.sourceRoom) {
             const source = document.createElement('span');
@@ -770,8 +835,9 @@
             div.append(badges);
         }
         div.append(nick);
-        // A notice ("virou membro do canal!" on YouTube, a sub or a raid on Twitch) in the platform's color, then the
-        // message if there is one (on its own line, see chat.css). Its values ({ value }) stand out.
+        // A notice ("virou membro do canal!" on YouTube, a sub or a raid on Twitch, a gift on TikTok) in the platform's
+        // color, then the message if there is one (on its own line, see chat.css). Its values ({ value }) stand out; a
+        // TikTok gift shows its picture ({ image, name }) like an emote.
         if (line.notice) {
             const notice = document.createElement('span');
             notice.className = 'onc-notice';
@@ -780,12 +846,21 @@
                     notice.append(part);
                     return;
                 }
+                if (part.image) {
+                    const img = document.createElement('img');
+                    img.className = 'emoticon onc-notice-image';
+                    img.src = part.image;
+                    img.alt = img.title = part.name || '';
+                    notice.append(img, ' ');
+                    return;
+                }
                 const value = document.createElement('span');
                 value.className = 'onc-notice-value';
                 value.textContent = part.value;
                 notice.append(value);
             });
             div.classList.add('onc-notice-line', 'onc-notice-' + (line.platform || 'twitch'));
+            if (line.kind) div.classList.add('onc-' + line.platform + '-' + line.kind);
             div.append(' ', notice);
         } else if (!line.action) {
             const colon = document.createElement('span');
@@ -806,6 +881,85 @@
 
         newLines.appendChild(div);
         scheduleLayout();
+    }
+
+    // --- Oversized characters ----------------------------------------------------------------------
+    // Some characters are drawn much taller than a line (cuneiform signs like 𒐫, "zalgo" text with piles of accents...):
+    // with the fixed line height they would cover the name and the messages around. A character keeps at most a few
+    // accents (real writing needs no more; zalgo has dozens), then each unusual character (with its accents) is measured
+    // once in the font of its place, and one that would leave its line is drawn smaller, just enough to fit. Lines of
+    // common text (Latin letters and punctuation) skip all this.
+
+    const COMMON_TEXT = /^[\u0000-\u024f\u2000-\u206f]*$/;
+    // The room around the baseline in a line, in font sizes (the line height is 24px for 18px letters)
+    const ROOM_UP = 1.0;
+    const ROOM_DOWN = 0.32;
+    const MAX_MARKS = 4; // accents on one character (Hindi or Tibetan clusters can have a few)
+    const MARK = /\p{M}/gu;
+    const glyphCanvas = document.createElement('canvas').getContext('2d');
+    const graphemes = new Intl.Segmenter('pt-BR', { granularity: 'grapheme' });
+    const glyphScales = new Map(); // "<font>|<character>" -> the size to draw it (1 = as it is)
+
+    function glyphScale(grapheme, font) {
+        const key = font + '|' + grapheme;
+        let scale = glyphScales.get(key);
+        if (scale === undefined) {
+            glyphCanvas.font = font;
+            const ink = glyphCanvas.measureText(grapheme);
+            const up = ink.actualBoundingBoxAscent / 100;
+            const down = ink.actualBoundingBoxDescent / 100;
+            // A little over the room is fine (accented capitals, emoji, Tibetan stacks): only the oversized shrink
+            scale = up > ROOM_UP * 1.1 || down > ROOM_DOWN * 1.4
+                ? Math.min(ROOM_UP / up, ROOM_DOWN / Math.max(down, 0.01))
+                : 1;
+            if (glyphScales.size >= 3000) glyphScales.clear();
+            glyphScales.set(key, scale);
+        }
+        return scale;
+    }
+
+    function fitOversized(line) {
+        if (COMMON_TEXT.test(line.textContent)) return;
+        const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT);
+        const texts = [];
+        while (walker.nextNode()) texts.push(walker.currentNode);
+        texts.forEach(node => {
+            const text = node.nodeValue;
+            if (COMMON_TEXT.test(text)) return;
+            const style = getComputedStyle(node.parentElement);
+            const font = `${style.fontStyle} ${style.fontWeight} 100px ${style.fontFamily}`;
+            const parts = document.createDocumentFragment();
+            let plain = '';
+            let small = null; // the run of oversized characters being drawn at the same size
+            let changed = false;
+            for (const { segment } of graphemes.segment(text)) {
+                let marks = 0;
+                const grapheme = segment.length > MAX_MARKS + 2 ? segment.replace(MARK, m => ++marks > MAX_MARKS ? '' : m) : segment;
+                changed ||= grapheme !== segment;
+                const scale = COMMON_TEXT.test(grapheme) ? 1 : glyphScale(grapheme, font);
+                if (scale === 1) {
+                    plain += grapheme;
+                    small = null;
+                    continue;
+                }
+                changed = true;
+                const size = scale.toFixed(2) + 'em';
+                if (small && small.style.fontSize === size) {
+                    small.textContent += grapheme;
+                    continue;
+                }
+                if (plain) parts.append(plain);
+                plain = '';
+                small = document.createElement('span');
+                small.className = 'onc-fit';
+                small.style.fontSize = size;
+                small.textContent = grapheme;
+                parts.append(small);
+            }
+            if (!changed) return;
+            if (plain) parts.append(plain);
+            node.replaceWith(parts);
+        });
     }
 
     // Web addresses in a message become links (opened in the user's browser by the app, and only
@@ -916,7 +1070,9 @@
         layoutPending = true;
         setTimeout(() => {
             layoutPending = false;
+            const added = [...newLines.children];
             box.append(newLines);
+            added.forEach(fitOversized); // needs the line on the page, to know its font
             let extra = box.children.length - (pinned ? MAX_LINES : MAX_LINES_SCROLLED_BACK);
             while (extra-- > 0) box.firstElementChild.remove();
             if (pinned) scrollToBottom();
@@ -959,9 +1115,9 @@
     const YOUTUBE_ROLE_COLORS = { owner: '#FFD600', moderator: '#5E84F1', member: '#2BA640' };
     const YOUTUBE_ROLE_BADGES = { owner: 'broadcaster/1', moderator: 'moderator/1' };
 
-    // YouTube has no name colors: one of the default colors from the whole name (the first letter alone gives the
-    // same color to everyone named alike, and YouTube names are often alike)
-    function youTubeColor(login) {
+    // YouTube and TikTok have no name colors: one of the default colors from the whole name (the first letter alone
+    // gives the same color to everyone named alike, and YouTube names are often alike)
+    function colorFromName(login) {
         let hash = 0;
         for (const c of login) hash = (hash * 31 + c.codePointAt(0)) >>> 0;
         return DEFAULT_COLORS[hash % DEFAULT_COLORS.length];
@@ -970,7 +1126,7 @@
     function onYouTubeMessage(m) {
         const login = String(m.login || m.name || '').toLowerCase();
         const text = (m.parts || []).filter(part => typeof part === 'string').join('').trim();
-        if (m.notice && settings.hideNotices) return;
+        if (m.notice && !settings.youTubeNotices) return;
         // A bot by its name: YouTube marks no bots (see "Bots")
         if (settings.hideBots && !m.superchat && !m.notice && (text[0] === '!' || /bot$/.test(login))) return;
 
@@ -979,12 +1135,42 @@
             platform: 'youtube',
             login,
             name: m.name || login,
-            color: userColor(login || '?', YOUTUBE_ROLE_COLORS[m.role] || youTubeColor(login)),
+            color: userColor(login || '?', YOUTUBE_ROLE_COLORS[m.role] || colorFromName(login)),
             action: false,
             parts: m.parts || [],
             superchat: m.superchat || null,
             notice: m.notice || ''
         }, YOUTUBE_ROLE_BADGES[m.role] || '', '');
+    }
+
+    // --- TikTok (Chat Multiplataforma) --------------------------------------------------------------
+    // The app reads the chat of a TikTok live (TikTok/LeitorDoTikTok.cs) and sends each message here
+    // (ContratoComAPagina.AdicionarDoTikTok), like the YouTube ones: same filters and sound, the filter lists hold the
+    // TikTok @ (without the @), the owner counts as the broadcaster and moderators as Mods. TikTok has no name colors.
+
+    const TIKTOK_ROLE_BADGES = { owner: 'broadcaster/1', moderator: 'moderator/1' };
+    // The switch of each kind of TikTok notice, in the settings
+    const TIKTOK_NOTICES = { gift: 'tiktokGifts', follow: 'tiktokFollows', share: 'tiktokShares', superfan: 'tiktokSuperFans' };
+
+    function onTikTokMessage(m) {
+        const login = String(m.login || m.name || '').toLowerCase();
+        const text = (m.parts || []).filter(part => typeof part === 'string').join('').trim();
+        // A notice (gift, follow, share, Super Fan) has its own switch each (TIKTOK_NOTICES)
+        if (m.kind && !settings[TIKTOK_NOTICES[m.kind]]) return;
+        // A bot by its name: TikTok marks no bots (see "Bots")
+        if (settings.hideBots && !m.kind && (text[0] === '!' || /bot$/.test(login))) return;
+
+        showLine({
+            id: 'tt-' + m.id,
+            platform: 'tiktok',
+            kind: m.kind || '',
+            login,
+            name: m.name || login,
+            color: userColor(login || '?', colorFromName(login)),
+            action: false,
+            parts: m.parts || [],
+            notice: m.notice || ''
+        }, TIKTOK_ROLE_BADGES[m.role] || '', '');
     }
 
     // --- Kick (Chat Multiplataforma) ----------------------------------------------------------------
@@ -994,7 +1180,10 @@
     // The app shows the state in the channel strip (onc:kick-state, see LogicaFaixaDoCanal).
 
     const KICK_API = 'https://kick.com/api/v2/channels/';
-    const KICK_PUSHER_URL = 'wss://ws-us2.pusher.com/app/32cbd69e4b950bf97679?protocol=7&client=js&version=8.4.0&flash=false';
+    // Kick's Pusher key and cluster. The site gets them from web.kick.com/api/v1/realtime/channels/{id}/chat/connection
+    // (asking for "pusher" only), but that API doesn't answer this page (CORS), so they're written here. When Kick
+    // changes them, the connection is refused with "pusher:error" (in the DevTools console) and the strip shows red.
+    const KICK_PUSHER_URL = 'wss://ws-us2.pusher.com/app/34bf7a0ff419a2a775b9?protocol=7&client=js&version=8.4.0&flash=false';
     const KICK_ACTIVITY_MS = 120000;   // Pusher's activity timeout: a ping when nothing came for this long...
     const KICK_PONG_LIMIT_MS = 30000;  // ...and a new connection when even the pong doesn't come
     const KICK_API_RETRY_MS = 20000;   // the site API didn't answer: try again
@@ -1036,6 +1225,20 @@
         if (newState === kick.state) return;
         kick.state = newState;
         postToApp('onc:kick-state:' + newState);
+        setPlatformState('kick', newState === 'disconnected' ? 'failed' : newState);
+    }
+
+    // The Chat Multiplataforma was switched on or off while the chat is open: the pill tells the new way
+    function refreshPill() {
+        if (settings.multiplatform) {
+            if (state) platformStates.twitch = state === 'unavailable' ? 'notfound' : state === 'disconnected' ? 'failed' : state;
+            multiPillText = '';
+            showMultiPill();
+        } else if (channel && state) {
+            showPill(state, stateTexts[state], state === 'connected' ? 4000 : 0);
+        } else {
+            pill.remove();
+        }
     }
 
     function loadKickChannel(name) {
@@ -1097,6 +1300,9 @@
                     break;
                 case 'pusher:ping':
                     send('pusher:pong', {});
+                    break;
+                case 'pusher:error':
+                    console.warn('[ONC] Kick refused the connection: ' + message.data);
                     break;
                 case 'App\\Events\\ChatMessageEvent':
                     onKickMessage(data);
@@ -1214,15 +1420,40 @@
             showOrHideGifs();
             showPlatforms();
             if (settings.hideOtherChannels) removeLines('.onc-other-channel');
-            if (settings.hideNotices) removeLines('.onc-notice-line');
-            if (!settings.multiplatform) removeLines('.chat_line[data-id^="yt-"], .chat_line[data-id^="kick-"]');
+            // A notice switched off goes away from the screen too
+            if (!settings.twitchNotices) removeLines('.onc-notice-twitch');
+            if (!settings.youTubeNotices) removeLines('.onc-notice-youtube');
+            Object.entries(TIKTOK_NOTICES).forEach(([kind, option]) => {
+                if (!settings[option]) removeLines('.onc-tiktok-' + kind);
+            });
+            if (!settings.multiplatform) removeLines('.chat_line[data-id^="yt-"], .chat_line[data-id^="kick-"], .chat_line[data-id^="tt-"]');
+            const wasMultiplatform = pill.classList.contains('multi');
             updateKick();
+            if (wasMultiplatform !== !!settings.multiplatform) refreshPill();
+        },
+
+        // Chat Multiplataforma: how the YouTube or the TikTok reading is (the app reads them): connecting, connected,
+        // waiting, failed, notfound or off
+        platformState(platform, newState) {
+            setPlatformState(platform, newState);
         },
 
         // A message of the YouTube chat (Chat Multiplataforma)
         addYouTube(message) {
             if (!started || !settings.multiplatform) return;
             onYouTubeMessage(message);
+        },
+
+        // A message of the TikTok chat (Chat Multiplataforma)
+        addTikTok(message) {
+            if (!started || !settings.multiplatform) return;
+            onTikTokMessage(message);
+        },
+
+        // A TikTok moderator deleted messages: by their ids and by the @ of who sent them
+        removeTikTok(ids, logins) {
+            (ids || []).forEach(id => removeLines(`.chat_line[data-id="${CSS.escape('tt-' + id)}"]`));
+            (logins || []).forEach(login => removeLines(`.chat_line[data-id^="tt-"][data-nick="${CSS.escape(String(login).toLowerCase())}"]`));
         },
 
         // A line from the app in the user's color, like a /me message (channel point redemptions). The same text

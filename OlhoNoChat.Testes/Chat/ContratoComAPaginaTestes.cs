@@ -1,5 +1,6 @@
 using OlhoNoChat.Chat;
 using OlhoNoChat.Configuracoes;
+using OlhoNoChat.TikTok;
 
 namespace OlhoNoChat.Testes.Chat;
 
@@ -13,7 +14,7 @@ public sealed class ContratoComAPaginaTestes
     public void JsonDeConfiguracoes_PadraoDaPrimeiraInstalacao_Exato()
     {
         Assert.Equal(
-            """{"fade":0,"hideBots":true,"hideGifs":false,"hideOtherChannels":false,"hideNotices":false,"highlightUsers":false,"allowedUsersOnly":false,"playSound":true,"filterAllowAllVIPs":false,"filterAllowAllMods":false,"vips":[],"blockList":[],"multiplatform":false,"kick":""}""",
+            """{"fade":0,"hideBots":true,"hideGifs":false,"hideOtherChannels":false,"twitchNotices":true,"youTubeNotices":true,"tiktokGifts":true,"tiktokFollows":true,"tiktokShares":false,"tiktokSuperFans":true,"highlightUsers":false,"allowedUsersOnly":false,"playSound":true,"filterAllowAllVIPs":false,"filterAllowAllMods":false,"vips":[],"blockList":[],"multiplatform":false,"kick":""}""",
             ContratoComAPagina.JsonDeConfiguracoes(new Opcoes()));
     }
 
@@ -27,7 +28,12 @@ public sealed class ContratoComAPaginaTestes
             EsconderBots = false,
             EsconderGifs = true,
             EsconderOutrosCanais = true,
-            EsconderAvisos = true,
+            MostrarAvisosDaTwitch = false,
+            MostrarAvisosDoYouTube = false,
+            MostrarPresentesDoTikTok = false,
+            MostrarSeguidoresDoTikTok = false,
+            MostrarCompartilhamentosDoTikTok = true,
+            MostrarSuperfasDoTikTok = false,
             DestacarUsuarios = true,
             SoUsuariosDaLista = true,
             SomDeMensagem = "NONE",
@@ -38,7 +44,7 @@ public sealed class ContratoComAPaginaTestes
         };
 
         Assert.Equal(
-            """{"fade":45,"hideBots":false,"hideGifs":true,"hideOtherChannels":true,"hideNotices":true,"highlightUsers":true,"allowedUsersOnly":true,"playSound":false,"filterAllowAllVIPs":true,"filterAllowAllMods":true,"vips":["fulano","beltrano"],"blockList":["nightbot"],"multiplatform":false,"kick":""}""",
+            """{"fade":45,"hideBots":false,"hideGifs":true,"hideOtherChannels":true,"twitchNotices":false,"youTubeNotices":false,"tiktokGifts":false,"tiktokFollows":false,"tiktokShares":true,"tiktokSuperFans":false,"highlightUsers":true,"allowedUsersOnly":true,"playSound":false,"filterAllowAllVIPs":true,"filterAllowAllMods":true,"vips":["fulano","beltrano"],"blockList":["nightbot"],"multiplatform":false,"kick":""}""",
             ContratoComAPagina.JsonDeConfiguracoes(opcoes));
     }
 
@@ -90,6 +96,36 @@ public sealed class ContratoComAPaginaTestes
         Assert.Equal(
             """window.oncScrollModeWanted = {"enabled":false,"banner":false,"hotkey":""}; if (window.oncSetScrollMode) window.oncSetScrollMode(window.oncScrollModeWanted);""",
             ContratoComAPagina.ModoRolagem(false, false, ""));
+    }
+
+    [Fact]
+    public void AdicionarDoTikTok_TextoEEmotesComoNaTwitch()
+    {
+        var item = new ItemDoTikTok("123", "42", "viewer1", "Viewer Um", PapelNoTikTok.Moderador,
+            [new ParteDoTikTok("oi "), new ParteDoTikTok("", "https://exemplo.com/e.webp")]);
+
+        Assert.Equal(
+            """window.oncChat && window.oncChat.addTikTok && window.oncChat.addTikTok({"id":"123","login":"viewer1","name":"Viewer Um","role":"moderator","parts":["oi ",{"emote":{"src":"https://exemplo.com/e.webp"},"name":""}]});""",
+            ContratoComAPagina.AdicionarDoTikTok(item));
+    }
+
+    [Theory]
+    [InlineData(PapelNoTikTok.Dono, "owner")]
+    [InlineData(PapelNoTikTok.Assinante, "subscriber")]
+    [InlineData(PapelNoTikTok.Nenhum, "")]
+    public void AdicionarDoTikTok_Papel(PapelNoTikTok papel, string role)
+    {
+        var item = new ItemDoTikTok("1", "2", "viewer1", "viewer1", papel, [new ParteDoTikTok("oi")]);
+
+        Assert.Contains($"\"role\":\"{role}\"", ContratoComAPagina.AdicionarDoTikTok(item));
+    }
+
+    [Fact]
+    public void ApagarDoTikTok_IdsELogins()
+    {
+        Assert.Equal(
+            """window.oncChat && window.oncChat.removeTikTok && window.oncChat.removeTikTok(["1","2"], ["viewer1"]);""",
+            ContratoComAPagina.ApagarDoTikTok(["1", "2"], ["viewer1"]));
     }
 
     [Fact]

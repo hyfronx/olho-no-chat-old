@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using OlhoNoChat.Configuracoes;
+using OlhoNoChat.TikTok;
 using OlhoNoChat.YouTube;
 
 namespace OlhoNoChat.Chat;
@@ -32,7 +33,13 @@ public static class ContratoComAPagina
             hideBots = opcoes.EsconderBots,
             hideGifs = opcoes.EsconderGifs,
             hideOtherChannels = opcoes.EsconderOutrosCanais,
-            hideNotices = opcoes.EsconderAvisos,
+            // Os avisos de cada plataforma, cada um com o seu interruptor
+            twitchNotices = opcoes.MostrarAvisosDaTwitch,
+            youTubeNotices = opcoes.MostrarAvisosDoYouTube,
+            tiktokGifts = opcoes.MostrarPresentesDoTikTok,
+            tiktokFollows = opcoes.MostrarSeguidoresDoTikTok,
+            tiktokShares = opcoes.MostrarCompartilhamentosDoTikTok,
+            tiktokSuperFans = opcoes.MostrarSuperfasDoTikTok,
             highlightUsers = opcoes.DestacarUsuarios,
             allowedUsersOnly = opcoes.SoUsuariosDaLista,
             playSound = !string.Equals(opcoes.SomDeMensagem, "none", StringComparison.OrdinalIgnoreCase),
@@ -104,6 +111,112 @@ public static class ContratoComAPagina
         });
         return $"window.oncChat && window.oncChat.addYouTube && window.oncChat.addYouTube({json});";
     }
+
+    /// <summary>
+    /// Uma mensagem do chat do TikTok (Chat Multiplataforma): o texto e os emotes da live como
+    /// <c>{ emote: { src }, name }</c>, igual aos emotes das mensagens da Twitch.
+    /// </summary>
+    public static string AdicionarDoTikTok(ItemDoTikTok item)
+    {
+        string json = JsonSerializer.Serialize(new
+        {
+            id = item.Id,
+            login = item.Login,
+            name = item.Nome,
+            role = item.Papel switch
+            {
+                PapelNoTikTok.Dono => "owner",
+                PapelNoTikTok.Moderador => "moderator",
+                PapelNoTikTok.Assinante => "subscriber",
+                _ => string.Empty,
+            },
+            parts = item.Partes.Select(p => p.Imagem == null ? (object)p.Texto : new { emote = new { src = p.Imagem }, name = "" }),
+        });
+        return $"window.oncChat && window.oncChat.addTikTok && window.oncChat.addTikTok({json});";
+    }
+
+    /// <summary>
+    /// Um aviso do TikTok (Chat Multiplataforma), no formato dos avisos da Twitch: o texto em partes, com os valores (o
+    /// presente, a quantidade) em <c>{ value }</c> e a imagem do presente em <c>{ image, name }</c>. <c>kind</c> diz qual
+    /// interruptor vale para ele (a página esconde os desligados).
+    /// </summary>
+    public static string AdicionarAvisoDoTikTok(AvisoDoTikTok aviso)
+    {
+        object[] partes = aviso.Tipo switch
+        {
+            TipoDeAvisoDoTikTok.Presente when aviso.Presente is { } p => Presente(p),
+            TipoDeAvisoDoTikTok.Seguiu => ["seguiu o criador de LIVE"],
+            TipoDeAvisoDoTikTok.Compartilhou => ["compartilhou a LIVE"],
+            _ => ["acabou de se tornar ", new { value = "Superfã" }, "!"],
+        };
+        string json = JsonSerializer.Serialize(new
+        {
+            id = aviso.Id,
+            login = aviso.Login,
+            name = aviso.Nome,
+            role = string.Empty,
+            kind = aviso.Tipo switch
+            {
+                TipoDeAvisoDoTikTok.Presente => "gift",
+                TipoDeAvisoDoTikTok.Seguiu => "follow",
+                TipoDeAvisoDoTikTok.Compartilhou => "share",
+                _ => "superfan",
+            },
+            parts = Array.Empty<object>(),
+            notice = partes,
+        });
+        return $"window.oncChat && window.oncChat.addTikTok && window.oncChat.addTikTok({json});";
+    }
+
+    // "enviou 5x [imagem] Rosa (5 moedas)": a quantidade antes, na ordem de leitura (o TikTok põe o "x5" depois porque é
+    // o contador do combo subindo na tela; escolha do usuário em 2026-10-23)
+    private static object[] Presente(PresenteDoTikTok presente)
+    {
+        var partes = new List<object> { "enviou " };
+        if (presente.Quantidade > 1)
+            partes.AddRange([new { value = presente.Quantidade.ToString(CultureInfo.InvariantCulture) + "x" }, " "]);
+        if (presente.Imagem != null)
+            partes.Add(new { image = presente.Imagem, name = presente.Nome });
+        partes.Add(new { value = presente.Nome });
+        if (presente.Moedas > 0)
+            partes.Add(presente.Moedas == 1 ? " (1 moeda)" : $" ({presente.Moedas.ToString("N0", new CultureInfo("pt-BR"))} moedas)");
+        return [.. partes];
+    }
+
+    /// <summary>
+    /// Chat Multiplataforma: como está a leitura do YouTube ou do TikTok (que o app faz), para o aviso de conexão da página
+    /// juntar todas as plataformas.
+    /// </summary>
+    public static string EstadoDaPlataforma(string plataforma, string estado) =>
+        $"window.oncChat && window.oncChat.platformState && window.oncChat.platformState({JsonSerializer.Serialize(plataforma)}, " +
+        $"{JsonSerializer.Serialize(estado)});";
+
+    /// <summary>O estado do leitor do YouTube como a página entende.</summary>
+    public static string EstadoParaAPagina(EstadoDoYouTube estado) => estado switch
+    {
+        EstadoDoYouTube.Procurando => "connecting",
+        EstadoDoYouTube.Conectado => "connected",
+        EstadoDoYouTube.EsperandoALive => "waiting",
+        EstadoDoYouTube.CanalNaoExiste => "notfound",
+        EstadoDoYouTube.SemConexao => "failed",
+        _ => "off",
+    };
+
+    /// <summary>O estado do leitor do TikTok como a página entende.</summary>
+    public static string EstadoParaAPagina(EstadoDoTikTok estado) => estado switch
+    {
+        EstadoDoTikTok.Procurando => "connecting",
+        EstadoDoTikTok.Conectado => "connected",
+        EstadoDoTikTok.EsperandoALive => "waiting",
+        EstadoDoTikTok.CanalNaoExiste => "notfound",
+        EstadoDoTikTok.SemConexao => "failed",
+        _ => "off",
+    };
+
+    /// <summary>Um moderador do TikTok apagou mensagens: pelos ids delas e pelo @ de quem mandou.</summary>
+    public static string ApagarDoTikTok(IReadOnlyList<string> ids, IReadOnlyList<string> logins) =>
+        $"window.oncChat && window.oncChat.removeTikTok && window.oncChat.removeTikTok({JsonSerializer.Serialize(ids)}, " +
+        $"{JsonSerializer.Serialize(logins)});";
 
     /// <summary>Para a vigia: a saúde da conexão da página com a Twitch.</summary>
     public const string PerguntarSaude = """

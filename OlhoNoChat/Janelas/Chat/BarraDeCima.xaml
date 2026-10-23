@@ -48,10 +48,12 @@
             </ToggleButton>
             <Rectangle Style="{StaticResource SeparadorDaBarra}" />
 
-            <!-- Chat Multiplataforma (Twitch, YouTube e Kick) ou só a Twitch: os logos coloridos das três plataformas em triângulo
-                 (diferente do balão do Escrever). Só Twitch: o do YouTube e o da Kick ficam apagados, em branco e laranja;
-                 ligado: os três com as cores deles no fundo branco. -->
-            <ToggleButton x:Name="botaoMultiplataforma" Style="{StaticResource BotaoDaBarraLigaDesliga}"
+            <!-- Chat Multiplataforma (Twitch, YouTube, Kick e TikTok) ou só a Twitch: os logos das quatro plataformas em
+                 bolinhas sobrepostas do tamanho da engrenagem (opção "C", em teste; a opção "A", em ladrilhos 2×2, está
+                 guardada em ..\botao-multiplataforma-opcao-A.xaml, fora do git). Ligado: todos coloridos; só Twitch: o do
+                 YouTube, o da Kick e o do TikTok ficam apagados, em branco e laranja. O anel da cor da barra separa as
+                 bolinhas. -->
+            <ToggleButton x:Name="botaoMultiplataforma" Style="{StaticResource BotaoDaBarraLigaDesliga}" Width="76"
                           AutomationProperties.Name="Chat Multiplataforma" Checked="Multiplataforma_Mudou" Unchecked="Multiplataforma_Mudou">
                 <ToggleButton.Resources>
                     <!-- Apagado em só Twitch -->
@@ -72,6 +74,15 @@
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
+                    <!-- As sombras azul e vermelha da nota do TikTok: só ligado -->
+                    <Style x:Key="SombraDoLogo" TargetType="Path">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
                     <!-- O desenho do logo: laranja em só Twitch, a cor dele (Tag) ligado -->
                     <Style x:Key="DesenhoDoLogo" TargetType="Path">
                         <Setter Property="Fill" Value="{StaticResource Laranja}" />
@@ -82,28 +93,48 @@
                         </Style.Triggers>
                     </Style>
                 </ToggleButton.Resources>
-                <Canvas Width="24" Height="23">
-                    <!-- Twitch, em cima -->
-                    <Canvas Canvas.Left="6" Width="16" Height="18">
-                        <Canvas.RenderTransform>
-                            <ScaleTransform ScaleX="0.75" ScaleY="0.75" />
-                        </Canvas.RenderTransform>
-                        <Path Fill="White" Data="M3,3 H14 V9 L11,12 H8 L6,14 V12 H3 Z" />
-                        <Path Fill="#9146FF" Data="M3,1 L1,4 V15 H5 V18 L8,15 H11 L16,10 V1 Z M14,9 L11,12 H8 L6,14 V12 H3 V3 H14 Z" />
-                        <Path Fill="#9146FF" Data="M10,5 H11.5 V8.5 H10 Z M6.8,5 H8.3 V8.5 H6.8 Z" />
-                    </Canvas>
-                    <!-- YouTube, embaixo à esquerda -->
-                    <Grid Canvas.Left="0" Canvas.Top="14.5" Width="12" Height="8.5" Style="{StaticResource LogoQueAcende}">
-                        <Border CornerRadius="2.5" Tag="#FF0000" Style="{StaticResource FundoDoLogo}" />
-                        <Path Data="M4.8,2.2 V6.3 L8.2,4.25 Z" Tag="White" Style="{StaticResource DesenhoDoLogo}" />
-                    </Grid>
-                    <!-- Kick, embaixo à direita -->
-                    <Grid Canvas.Left="13.5" Canvas.Top="13" Width="10" Height="10" Style="{StaticResource LogoQueAcende}">
-                        <Border CornerRadius="2.2" Tag="#0B0B0B" Style="{StaticResource FundoDoLogo}" />
-                        <Path Tag="#53FC18" Style="{StaticResource DesenhoDoLogo}"
-                              Data="M1.8,1.8 H3.9 V3.6 H4.9 V2.7 H5.8 V1.8 H8.2 V3.9 H7.3 V4.8 H6.4 V5.2 H7.3 V6.1 H8.2 V8.2 H5.8 V7.3 H4.9 V6.4 H3.9 V8.2 H1.8 Z" />
-                    </Grid>
-                </Canvas>
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="23" Height="23" CornerRadius="11.5" Background="{StaticResource Laranja}" Panel.ZIndex="4">
+                        <Grid Width="20" Height="20">
+                            <Border CornerRadius="10" Background="#9146FF" />
+                            <Viewbox Width="9.5" Height="11" Margin="0,1,0,0">
+                                <Canvas Width="2400" Height="2800">
+                                    <Path Fill="White" Data="M500,0 L0,500 V2300 H600 V2800 L1100,2300 H1500 L2400,1400 V0 Z" />
+                                    <Path Fill="#9146FF" Data="M1700,550 H1900 V1150 H1700 Z M1150,550 H1350 V1150 H1150 Z" />
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
+                    </Border>
+                    <Border Width="23" Height="23" CornerRadius="11.5" Background="{StaticResource Laranja}" Panel.ZIndex="3" Margin="-7,0,0,0">
+                        <Grid Width="20" Height="20" Style="{StaticResource LogoQueAcende}">
+                            <Border CornerRadius="10" Tag="#FF0000" Style="{StaticResource FundoDoLogo}" />
+                            <Path Data="M8,6 V14 L14.6,10 Z" Tag="White" Style="{StaticResource DesenhoDoLogo}" />
+                        </Grid>
+                    </Border>
+                    <Border Width="23" Height="23" CornerRadius="11.5" Background="{StaticResource Laranja}" Panel.ZIndex="2" Margin="-7,0,0,0">
+                        <Grid Width="20" Height="20" Style="{StaticResource LogoQueAcende}">
+                            <Border CornerRadius="10" Tag="#0B0B0B" Style="{StaticResource FundoDoLogo}" />
+                            <Viewbox Width="10" Height="10">
+                                <Canvas Width="9" Height="9">
+                                    <Path Canvas.Left="-2.5" Canvas.Top="-2.5" Tag="#53FC18" Style="{StaticResource DesenhoDoLogo}"
+                                          Data="M2.5,2.5 H5.5 V5.1 H6.8 V3.8 H8.1 V2.5 H11.5 V5.5 H10.2 V6.7 H8.9 V7.3 H10.2 V8.5 H11.5 V11.5 H8.1 V10.2 H6.8 V8.9 H5.5 V11.5 H2.5 Z" />
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
+                    </Border>
+                    <Border Width="23" Height="23" CornerRadius="11.5" Background="{StaticResource Laranja}" Panel.ZIndex="1" Margin="-7,0,0,0">
+                        <Grid Width="20" Height="20" Style="{StaticResource LogoQueAcende}">
+                            <Border CornerRadius="10" Tag="Black" Style="{StaticResource FundoDoLogo}" />
+                            <Viewbox Width="11.5" Height="11.5">
+                                <Canvas Width="24" Height="24">
+                                    <Path Data="{StaticResource NotaDoTikTok}" Fill="#25F4EE" Canvas.Left="-1.3" Canvas.Top="-1.3" Style="{StaticResource SombraDoLogo}" />
+                                    <Path Data="{StaticResource NotaDoTikTok}" Fill="#FE2C55" Canvas.Left="1.3" Canvas.Top="1.3" Style="{StaticResource SombraDoLogo}" />
+                                    <Path Data="{StaticResource NotaDoTikTok}" Tag="White" Style="{StaticResource DesenhoDoLogo}" />
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
+                    </Border>
+                </StackPanel>
             </ToggleButton>
 
             <!-- Abre e fecha a caixa "Escrever no chat…": aceso enquanto ela está aberta -->

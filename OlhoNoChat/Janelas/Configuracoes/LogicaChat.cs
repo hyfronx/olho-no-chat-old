@@ -30,7 +30,7 @@ public sealed partial class LogicaChat : LogicaDaPagina
     [ObservableProperty]
     private int _tipoDeChat;
 
-    /// <summary>Chat Multiplataforma (Twitch, YouTube e Kick): só existe no Padrão, então ligar escolhe o Padrão e trava a lista.</summary>
+    /// <summary>Chat Multiplataforma (Twitch, YouTube, Kick e TikTok): só existe no Padrão, então ligar escolhe o Padrão e trava a lista.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PodeEscolherOTipo))]
     private bool _chatMultiplataforma;
@@ -65,7 +65,22 @@ public sealed partial class LogicaChat : LogicaDaPagina
     private bool _esconderOutrosCanais;
 
     [ObservableProperty]
-    private bool _esconderAvisos;
+    private bool _mostrarAvisosDaTwitch;
+
+    [ObservableProperty]
+    private bool _mostrarAvisosDoYouTube;
+
+    [ObservableProperty]
+    private bool _mostrarPresentesDoTikTok;
+
+    [ObservableProperty]
+    private bool _mostrarSeguidoresDoTikTok;
+
+    [ObservableProperty]
+    private bool _mostrarCompartilhamentosDoTikTok;
+
+    [ObservableProperty]
+    private bool _mostrarSuperfasDoTikTok;
 
     // Chat oficial da Twitch
     [ObservableProperty]
@@ -106,7 +121,12 @@ public sealed partial class LogicaChat : LogicaDaPagina
         EsconderBots = opcoes.EsconderBots;
         EsconderGifs = opcoes.EsconderGifs;
         EsconderOutrosCanais = opcoes.EsconderOutrosCanais;
-        EsconderAvisos = opcoes.EsconderAvisos;
+        MostrarAvisosDaTwitch = opcoes.MostrarAvisosDaTwitch;
+        MostrarAvisosDoYouTube = opcoes.MostrarAvisosDoYouTube;
+        MostrarPresentesDoTikTok = opcoes.MostrarPresentesDoTikTok;
+        MostrarSeguidoresDoTikTok = opcoes.MostrarSeguidoresDoTikTok;
+        MostrarCompartilhamentosDoTikTok = opcoes.MostrarCompartilhamentosDoTikTok;
+        MostrarSuperfasDoTikTok = opcoes.MostrarSuperfasDoTikTok;
         BetterTtv = opcoes.BetterTtv;
         MenuDeEmotesDoBetterTtv = opcoes.MenuDeEmotesDoBetterTtv;
         Emotes7tv = opcoes.Emotes7tv;
@@ -131,7 +151,12 @@ public sealed partial class LogicaChat : LogicaDaPagina
                 opcoes.EsconderBots = EsconderBots;
                 opcoes.EsconderGifs = EsconderGifs;
                 opcoes.EsconderOutrosCanais = EsconderOutrosCanais;
-                opcoes.EsconderAvisos = EsconderAvisos;
+                opcoes.MostrarAvisosDaTwitch = MostrarAvisosDaTwitch;
+                opcoes.MostrarAvisosDoYouTube = MostrarAvisosDoYouTube;
+                opcoes.MostrarPresentesDoTikTok = MostrarPresentesDoTikTok;
+                opcoes.MostrarSeguidoresDoTikTok = MostrarSeguidoresDoTikTok;
+                opcoes.MostrarCompartilhamentosDoTikTok = MostrarCompartilhamentosDoTikTok;
+                opcoes.MostrarSuperfasDoTikTok = MostrarSuperfasDoTikTok;
                 break;
             case Tipos.ChatOficial:
                 opcoes.BetterTtv = BetterTtv;
@@ -158,7 +183,12 @@ public sealed partial class LogicaChat : LogicaDaPagina
         estado["Chat.EsconderBots"] = EsconderBots.ToString();
         estado["Chat.EsconderGifs"] = EsconderGifs.ToString();
         estado["Chat.EsconderOutrosCanais"] = EsconderOutrosCanais.ToString();
-        estado["Chat.EsconderAvisos"] = EsconderAvisos.ToString();
+        estado["Chat.MostrarAvisosDaTwitch"] = MostrarAvisosDaTwitch.ToString();
+        estado["Chat.MostrarAvisosDoYouTube"] = MostrarAvisosDoYouTube.ToString();
+        estado["Chat.MostrarPresentesDoTikTok"] = MostrarPresentesDoTikTok.ToString();
+        estado["Chat.MostrarSeguidoresDoTikTok"] = MostrarSeguidoresDoTikTok.ToString();
+        estado["Chat.MostrarCompartilhamentosDoTikTok"] = MostrarCompartilhamentosDoTikTok.ToString();
+        estado["Chat.MostrarSuperfasDoTikTok"] = MostrarSuperfasDoTikTok.ToString();
         estado["Chat.BetterTtv"] = BetterTtv.ToString();
         estado["Chat.MenuDeEmotesDoBetterTtv"] = MenuDeEmotesDoBetterTtv.ToString();
         estado["Chat.Emotes7tv"] = Emotes7tv.ToString();

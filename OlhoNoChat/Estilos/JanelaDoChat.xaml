@@ -21,6 +21,9 @@
     <SolidColorBrush x:Key="LinhaDaFaixa" Color="#33FFFFFF" />
     <SolidColorBrush x:Key="ErroDaFaixa" Color="#FFB9A0" />
 
+    <!-- A nota do TikTok (num quadrado de 24): o logo na faixa do canal e no botão do Chat Multiplataforma -->
+    <StreamGeometry x:Key="NotaDoTikTok">M 12.525 .02 c 1.31 -.02 2.61 -.01 3.91 -.02 .08 1.53 .63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79 v 4.03 c -1.44 -.05 -2.89 -.35 -4.2 -.97 -.57 -.26 -1.1 -.59 -1.62 -.93 -.01 2.92 .01 5.84 -.02 8.75 -.08 1.4 -.54 2.79 -1.35 3.94 -1.31 1.92 -3.58 3.17 -5.91 3.21 -1.43 .08 -2.86 -.31 -4.08 -1.03 -2.02 -1.19 -3.44 -3.37 -3.65 -5.71 -.02 -.5 -.03 -1 -.01 -1.49 .18 -1.9 1.12 -3.72 2.58 -4.96 1.66 -1.44 3.98 -2.13 6.15 -1.72 .02 1.48 -.04 2.96 -.04 4.44 -.99 -.32 -2.15 -.23 -3.02 .37 -.63 .41 -1.11 1.04 -1.36 1.75 -.21 .51 -.15 1.07 -.14 1.61 .24 1.64 1.82 3.02 3.5 2.87 1.12 -.01 2.19 -.66 2.77 -1.61 .19 -.33 .4 -.67 .41 -1.06 .1 -1.79 .06 -3.57 .07 -5.36 .01 -4.03 -.01 -8.05 .02 -12.07 z</StreamGeometry>
+
     <!-- Botões da barra laranja com um painel embaixo: escurecidos enquanto o painel está aberto (Tag = "aberto") -->
     <Style x:Key="BotaoDaBarraComPainel" TargetType="Button" BasedOn="{StaticResource BotaoDaBarra}">
         <Setter Property="Template">
@@ -45,14 +48,20 @@
         </Setter>
     </Style>
 
-    <!-- Botões de ligar/desligar da barra ("Sempre no topo", "Escrever"): acesos (brancos, ícone laranja) quando ligados -->
+    <!-- Botões de ligar/desligar da barra ("Sempre no topo", "Multiplataforma", "Escrever"): ligados, ganham uma barrinha
+         branca embaixo, como uma aba ativa (o ícone também muda: alfinete fincado, logos coloridos). Sem fundo branco
+         (pedido do usuário em 2026-10-23). -->
     <Style x:Key="BotaoDaBarraLigaDesliga" TargetType="ToggleButton" BasedOn="{StaticResource BotaoDaBarra}">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="Fundo" Background="{TemplateBinding Background}" CornerRadius="6">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
-                    </Border>
+                    <Grid>
+                        <Border x:Name="Fundo" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <Border x:Name="Marca" Width="14" Height="3" CornerRadius="1.5" Background="White" Margin="0,0,0,-2"
+                                HorizontalAlignment="Center" VerticalAlignment="Bottom" Visibility="Collapsed" />
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Fundo" Property="Background" Value="{StaticResource BotaoDaBarraComMouse}" />
@@ -61,23 +70,8 @@
                             <Setter TargetName="Fundo" Property="Background" Value="{StaticResource BotaoDaBarraApertado}" />
                         </Trigger>
                         <Trigger Property="IsChecked" Value="True">
-                            <Setter TargetName="Fundo" Property="Background" Value="White" />
-                            <Setter Property="Foreground" Value="{StaticResource Laranja}" />
+                            <Setter TargetName="Marca" Property="Visibility" Value="Visible" />
                         </Trigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="True" />
-                                <Condition Property="IsMouseOver" Value="True" />
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Fundo" Property="Background" Value="#E6FFFFFF" />
-                        </MultiTrigger>
-                        <MultiTrigger>
-                            <MultiTrigger.Conditions>
-                                <Condition Property="IsChecked" Value="True" />
-                                <Condition Property="IsPressed" Value="True" />
-                            </MultiTrigger.Conditions>
-                            <Setter TargetName="Fundo" Property="Background" Value="#CCFFFFFF" />
-                        </MultiTrigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>

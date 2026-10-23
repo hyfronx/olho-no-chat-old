@@ -130,4 +130,45 @@ public class ChatMultiplataformaTestes
         _opcoes.ChatMultiplataforma = false;
         Assert.Equal(ligado, PaginaDoChat.DasOpcoes(_opcoes).ChaveDeRecarga);
     }
+
+    [Fact]
+    public void TikTokALer_SoComAFuncaoLigada()
+    {
+        _opcoes.CanalDoTikTok = "https://www.tiktok.com/@Fulano/live";
+        Assert.Equal("fulano", ChatMultiplataforma.TikTokALer(_opcoes));
+
+        _opcoes.ChatMultiplataforma = false;
+        Assert.Null(ChatMultiplataforma.TikTokALer(_opcoes));
+    }
+
+    [Fact]
+    public void SoOTikTok_AbreOChatSemTwitch()
+    {
+        _opcoes.Canal = string.Empty;
+        _opcoes.CanalDoYouTube = string.Empty;
+        _opcoes.CanalDoTikTok = "fulano";
+
+        Assert.True(ChatMultiplataforma.TemOutroCanal(_opcoes));
+        Assert.IsType<ChatPadrao>(PaginaDoChat.DasOpcoes(_opcoes));
+    }
+
+    [Fact]
+    public void TrocarOCanalDoTikTok_NaoRecarregaOChat()
+    {
+        string antes = PaginaDoChat.DasOpcoes(_opcoes).ChaveDeRecarga;
+        _opcoes.CanalDoTikTok = "fulano";
+
+        Assert.Equal(antes, PaginaDoChat.DasOpcoes(_opcoes).ChaveDeRecarga);
+    }
+
+    [Fact]
+    public void Restaurar_GuardaOCanalDoTikTok_ECorrigirNaoDeixaNulo()
+    {
+        _opcoes.CanalDoTikTok = "fulano";
+        Assert.Equal("fulano", _opcoes.RestauradasParaOPadrao().CanalDoTikTok);
+
+        _opcoes.CanalDoTikTok = null!;
+        _opcoes.Corrigir();
+        Assert.Equal(string.Empty, _opcoes.CanalDoTikTok);
+    }
 }

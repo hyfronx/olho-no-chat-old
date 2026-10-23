@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using OlhoNoChat.Atualizacoes;
 using OlhoNoChat.Configuracoes;
 using OlhoNoChat.Janelas.Chat;
+using OlhoNoChat.TikTok;
 using OlhoNoChat.Twitch;
 using OlhoNoChat.YouTube;
 using Velopack;
@@ -127,6 +128,7 @@ public static class Programa
         servicos.AddSingleton(sp => new ImagensDeEmotes(pastaDosEmotes, sp.GetRequiredService<ILogger<ImagensDeEmotes>>()));
         servicos.AddSingleton<ResgatesDePontos>();
         servicos.AddSingleton(sp => new LeitorDoYouTube(sp.GetRequiredService<ILogger<LeitorDoYouTube>>()));
+        servicos.AddSingleton(sp => new LeitorDoTikTok(sp.GetRequiredService<ILogger<LeitorDoTikTok>>()));
         servicos.AddSingleton(sp => new ProcuraDeAtualizacoes(sp.GetRequiredService<ILogger<ProcuraDeAtualizacoes>>(),
             () => arquivo.Opcoes, arquivo.Gravar));
         servicos.AddSingleton<IconeDaBandeja>();

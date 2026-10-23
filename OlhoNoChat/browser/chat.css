@@ -119,6 +119,11 @@ body.onc-multi .onc-platform {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Crect width='14' height='14' rx='3' fill='%230B0B0B'/%3E%3Cpath fill='%2353FC18' d='M2.5 2.5h3v2.6h1.3V3.8h1.3V2.5h3.4v3H10.2v1.2H8.9v.6h1.3v1.2h1.3v3H8.1v-1.3H6.8V8.9H5.5v2.6h-3z'/%3E%3C/svg%3E");
 }
 
+/* The TikTok note: white, with its cyan and red shadows, on black */
+.onc-platform.tiktok {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23000'/%3E%3Cg transform='translate(4.1 3.85) scale(.68)'%3E%3Cpath fill='%2325F4EE' transform='translate(-.9 -.9)' d='M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z'/%3E%3Cpath fill='%23FE2C55' transform='translate(.9 .9)' d='M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z'/%3E%3Cpath fill='%23fff' d='M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
 /* YouTube Super Chat: a bar and the amount in the Super Chat's color */
 .chat_line.onc-superchat {
     position: relative;
@@ -152,6 +157,8 @@ body.onc-multi .onc-platform {
    The highlight of the filters (the app's CSS, !important) wins over the background. */
 .onc-notice-twitch { --notice-color: #9146FF; }
 .onc-notice-youtube { --notice-color: #FF0000; }
+/* The TikTok red (its logo's second shadow) */
+.onc-notice-tiktok { --notice-color: #FE2C55; }
 
 /* A small gap keeps two notices in a row apart */
 .chat_line.onc-notice-line {
@@ -324,6 +331,14 @@ body.onc-links-on .onc-link {
 #onc-status.connected .onc-dot { background: #3BD16F; }
 #onc-status.disconnected .onc-dot,
 #onc-status.unavailable .onc-dot { background: #F04A4A; }
+/* Chat Multiplataforma: waiting for a live (YouTube, TikTok) is gray, like the dot of the channel strip; the text of all
+   the chats can be long, so it wraps inside the window */
+#onc-status.waiting .onc-dot { background: #8A8A8A; }
+#onc-status.multi {
+    white-space: normal;
+    max-width: calc(100% - 16px);
+    box-sizing: border-box;
+}
 
 @keyframes onc-pulse {
     0%, 100% { opacity: 1; transform: scale(1); }

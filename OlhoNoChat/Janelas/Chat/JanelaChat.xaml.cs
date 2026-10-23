@@ -12,6 +12,7 @@ using OlhoNoChat.Sistema;
 using OlhoNoChat.Som;
 using OlhoNoChat.Twitch;
 using OlhoNoChat.Atalhos;
+using OlhoNoChat.TikTok;
 using OlhoNoChat.YouTube;
 
 namespace OlhoNoChat.Janelas.Chat;
@@ -33,6 +34,7 @@ public partial class JanelaChat : Window
     private readonly AutorizacaoNoNavegador _autorizacao;
     private readonly ResgatesDePontos _resgates;
     private readonly LeitorDoYouTube _youTube;
+    private readonly LeitorDoTikTok _tikTok;
     private readonly ProcuraDeAtualizacoes _atualizacoes;
     private readonly IconeDaBandeja _bandeja;
     private readonly LogicaJanelaChat _logica = new();
@@ -50,7 +52,7 @@ public partial class JanelaChat : Window
 
     public JanelaChat(ILogger<JanelaChat> log, ArquivoDeConfiguracoes arquivo, ContaDaTwitch conta, AutorizacaoNoNavegador autorizacao,
         EnvioDeMensagem envio, ListaDeEmotes listaDeEmotes, ImagensDeEmotes imagensDeEmotes, ResgatesDePontos resgates, LeitorDoYouTube youTube,
-        ProcuraDeAtualizacoes atualizacoes, IconeDaBandeja bandeja)
+        LeitorDoTikTok tikTok, ProcuraDeAtualizacoes atualizacoes, IconeDaBandeja bandeja)
     {
         InitializeComponent();
 
@@ -60,6 +62,7 @@ public partial class JanelaChat : Window
         _autorizacao = autorizacao;
         _resgates = resgates;
         _youTube = youTube;
+        _tikTok = tikTok;
         _atualizacoes = atualizacoes;
         _bandeja = bandeja;
         _atalhos = new AtalhosGlobais(log);
@@ -91,6 +94,7 @@ public partial class JanelaChat : Window
         LigarNavegador();
         _resgates.Resgatado += resgate => Dispatcher.InvokeAsync(() => MostrarResgate(resgate));
         LigarYouTube();
+        LigarTikTok();
         _som.SaidaVoltouParaAPadrao += GravarSaidaDeSomPadrao;
         _conta.Mudou += () => Dispatcher.BeginInvoke(ContaMudou);
         // "Atualizar agora": o Velopack fecha o app sem passar pelo Closing, então a posição vai para as opções antes
@@ -129,6 +133,7 @@ public partial class JanelaChat : Window
             _atalhos.Dispose();
             _resgates.Desligar();
             _youTube.Desligar();
+            _tikTok.Desligar();
             _som.Dispose();
             _sempreNaFrente.Dispose();
         };
@@ -187,6 +192,7 @@ public partial class JanelaChat : Window
         AtualizarSom();
         _navegador.AbrirDasOpcoes();
         AtualizarYouTube();
+        AtualizarTikTok();
         FicarPronta();
     }
 
@@ -588,17 +594,19 @@ public partial class JanelaChat : Window
 
     // --- Canal e página do chat ------------------------------------------------------------------------------
 
-    // Grava os canais na hora e abre o chat deles (ou as boas-vindas, sem canal). Só o do YouTube ou o da Kick trocado não
-    // recarrega o chat (as mensagens da tela ficam): a página troca o canal da Kick sozinha
-    private void TrocarCanal(string canal, string youTube, string kick)
+    // Grava os canais na hora e abre o chat deles (ou as boas-vindas, sem canal). Só o do YouTube, o da Kick ou o do TikTok
+    // trocado não recarrega o chat (as mensagens da tela ficam): a página troca o canal da Kick sozinha
+    private void TrocarCanal(string canal, string youTube, string kick, string tikTok)
     {
         _log.LogInformation("Canal trocado na faixa do canal.");
         Opcoes.Canal = canal;
         Opcoes.CanalDoYouTube = youTube;
         Opcoes.CanalDaKick = kick;
+        Opcoes.CanalDoTikTok = tikTok;
         _arquivo.Gravar();
         _ = _navegador.AplicarOpcoesSalvasAsync(); // recarrega só se a página for outra (outra Twitch, sem canal...)
         AtualizarYouTube();
+        AtualizarTikTok();
         _caixa.Atualizar();
         AplicarEstado();
     }
@@ -607,7 +615,11 @@ public partial class JanelaChat : Window
 
     private void LigarYouTube()
     {
-        _youTube.EstadoMudou += estado => Dispatcher.BeginInvoke(() => _faixa.ConexaoDoYouTube = estado);
+        _youTube.EstadoMudou += estado => Dispatcher.BeginInvoke(() =>
+        {
+            _faixa.ConexaoDoYouTube = estado;
+            ContarAPaginaOsEstados();
+        });
         _youTube.MensagemRecebida += item =>
         {
             if (MensagemParaAPagina.De(item) is { } mensagem)
@@ -627,7 +639,7 @@ public partial class JanelaChat : Window
     }
 
     // O botão da barra: liga o Chat Multiplataforma (só no Padrão: outro tipo de chat vira o Padrão) ou volta a só Twitch,
-    // como o interruptor de Configurações > Chat. Sem canal do YouTube nem da Kick, a faixa abre na caixa do YouTube.
+    // como o interruptor de Configurações > Chat. Sem canal do YouTube, da Kick nem do TikTok, a faixa abre na caixa do YouTube.
     private async Task AlternarMultiplataformaAsync(bool ligado)
     {
         if (!_temWebView2 || ligado == Opcoes.ChatMultiplataforma)
@@ -643,8 +655,7 @@ public partial class JanelaChat : Window
         _arquivo.Gravar();
         await AplicarOpcoesSalvasAsync();
 
-        if (ligado && ChatMultiplataforma.CanalALer(Opcoes) == null && ChatMultiplataforma.KickALer(Opcoes).Length == 0
-            && PaginaDoChat.CanalSalvo(Opcoes).Length > 0)
+        if (ligado && !ChatMultiplataforma.TemOutroCanal(Opcoes) && PaginaDoChat.CanalSalvo(Opcoes).Length > 0)
             _faixa.AbrirEditorNoYouTube();
     }
 
@@ -652,6 +663,49 @@ public partial class JanelaChat : Window
     {
         if (_navegador.Pagina is ChatPadrao && _navegador.PaginaPronta && Opcoes.ChatMultiplataforma)
             _navegador.Executar(ContratoComAPagina.AdicionarDoYouTube(mensagem));
+    }
+
+    // --- TikTok (Chat Multiplataforma) -----------------------------------------------------------------------
+
+    private void LigarTikTok()
+    {
+        _tikTok.EstadoMudou += estado => Dispatcher.BeginInvoke(() =>
+        {
+            _faixa.ConexaoDoTikTok = estado;
+            ContarAPaginaOsEstados();
+        });
+        _tikTok.MensagemRecebida += item => Dispatcher.BeginInvoke(() => NaPaginaDoTikTok(ContratoComAPagina.AdicionarDoTikTok(item)));
+        _tikTok.MensagensApagadas += (ids, logins) =>
+            Dispatcher.BeginInvoke(() => NaPaginaDoTikTok(ContratoComAPagina.ApagarDoTikTok(ids, logins)));
+        // Presentes, seguidores, compartilhamentos e Superfãs: a página esconde os desligados (cada um tem o seu interruptor)
+        _tikTok.AvisoRecebido += aviso => Dispatcher.BeginInvoke(() => NaPaginaDoTikTok(ContratoComAPagina.AdicionarAvisoDoTikTok(aviso)));
+    }
+
+    // Lê o TikTok só com o Chat Multiplataforma ligado e um canal do TikTok (as mensagens vão para a página do Padrão)
+    private void AtualizarTikTok()
+    {
+        string? canal = ChatMultiplataforma.TikTokALer(Opcoes);
+        _tikTok.MostrarHistorico = Opcoes.MostrarHistoricoDoYouTube; // a mesma opção do YouTube; vale na próxima vez que conectar
+        if (canal != null && _temWebView2)
+            _tikTok.Ligar(canal);
+        else
+            _tikTok.Desligar();
+    }
+
+    // Chat Multiplataforma: o aviso de conexão da página junta todas as plataformas; a da Twitch e a da Kick ela mesma lê,
+    // a do YouTube e a do TikTok o app conta (a cada mudança e quando a página carrega)
+    private void ContarAPaginaOsEstados()
+    {
+        if (_navegador.Pagina is not ChatPadrao || !_navegador.PaginaPronta || !Opcoes.ChatMultiplataforma)
+            return;
+        _navegador.Executar(ContratoComAPagina.EstadoDaPlataforma("youtube", ContratoComAPagina.EstadoParaAPagina(_youTube.Estado)));
+        _navegador.Executar(ContratoComAPagina.EstadoDaPlataforma("tiktok", ContratoComAPagina.EstadoParaAPagina(_tikTok.Estado)));
+    }
+
+    private void NaPaginaDoTikTok(string script)
+    {
+        if (_navegador.Pagina is ChatPadrao && _navegador.PaginaPronta && Opcoes.ChatMultiplataforma)
+            _navegador.Executar(script);
     }
 
     private void LigarNavegador()
@@ -680,6 +734,7 @@ public partial class JanelaChat : Window
 
             barraDeCima.MostrarValores(Opcoes.TamanhoDoTexto, Opcoes.Fundo); // o tamanho salvo pode ter sido ajustado aos limites
             AtualizarPagina();
+            ContarAPaginaOsEstados();
             MostrarAvisosQueEsperam();
             _ = LigarResgatesAsync();
         };
@@ -835,6 +890,8 @@ public partial class JanelaChat : Window
         await _navegador.AplicarOpcoesSalvasAsync();
         AtualizarSom();
         AtualizarYouTube();
+        AtualizarTikTok();
+        ContarAPaginaOsEstados(); // o Chat Multiplataforma pode ter sido ligado agora
 
         if (ChatMultiplataforma.ResgatesLigados(Opcoes))
             _ = LigarResgatesAsync();

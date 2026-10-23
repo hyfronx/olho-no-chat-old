@@ -36,7 +36,8 @@
                 </Grid>
             </Border>
 
-            <!-- Chat Multiplataforma: o chat de uma live do YouTube e o de um canal da Kick junto com o da Twitch (só no Padrão) -->
+            <!-- Chat Multiplataforma: o chat de uma live do YouTube, o de um canal da Kick e o de uma live do TikTok junto com o da
+                 Twitch (só no Padrão) -->
             <Border Style="{DynamicResource Cartao}" Margin="0,4,0,4">
                 <StackPanel>
                     <Grid>
@@ -56,7 +57,7 @@
                                 </Border>
                             </StackPanel>
                             <TextBlock Style="{DynamicResource Dica}"
-                                       Text="Mostra também o chat da sua live no YouTube e na Kick, junto com o da Twitch, com o ícone de cada plataforma. É só para ler: enquanto estiver ligado, escrever no chat, os resgates e os outros tipos de chat ficam desligados. Os canais se escolhem na faixa em cima do chat; a Twitch fica opcional. Ainda em testes." />
+                                       Text="Mostra também o chat da sua live no YouTube, na Kick e no TikTok, junto com o da Twitch, com o ícone de cada plataforma. É só para ler: enquanto estiver ligado, escrever no chat, os resgates e os outros tipos de chat ficam desligados. Os canais se escolhem na faixa em cima do chat; a Twitch fica opcional. Ainda em testes." />
                         </StackPanel>
                         <ctl:Interruptor x:Name="interruptorMultiplataforma" Grid.Column="2" IsChecked="{Binding ChatMultiplataforma}"
                                          AutomationProperties.Name="Chat Multiplataforma" />
@@ -72,7 +73,7 @@
                         <StackPanel Style="{DynamicResource TextoDaLinha}">
                             <TextBlock Text="Mostrar as mensagens de antes de conectar" Style="{DynamicResource Rotulo}" />
                             <TextBlock Style="{DynamicResource Dica}"
-                                       Text="Ao entrar no chat de uma live, o YouTube manda junto as últimas mensagens que já tinham sido enviadas. Desligado, só aparecem as mensagens novas." />
+                                       Text="Ao entrar no chat de uma live, o YouTube e o TikTok mandam junto as últimas mensagens que já tinham sido enviadas. Desligado, só aparecem as mensagens novas." />
                         </StackPanel>
                         <ctl:Interruptor x:Name="interruptorHistoricoDoYouTube" Grid.Column="1" IsChecked="{Binding MostrarHistoricoDoYouTube}"
                                          AutomationProperties.Name="Mostrar as mensagens de antes de conectar" />
@@ -124,7 +125,7 @@
                             <StackPanel Grid.Column="1" Style="{DynamicResource TextoDaLinha}">
                                 <TextBlock Text="Esconder bots e comandos" Style="{DynamicResource Rotulo}" />
                                 <TextBlock Style="{DynamicResource Dica}"
-                                           Text="Esconde os robôs do chat (Nightbot, StreamElements, Moobot...) e as mensagens que começam com &quot;!&quot;. Na Twitch, os robôs são reconhecidos pelo selo de robô e pela lista da FrankerFaceZ; no YouTube e na Kick, pelo nome terminado em &quot;bot&quot;." />
+                                           Text="Esconde os robôs do chat (Nightbot, StreamElements, Moobot...) e as mensagens que começam com &quot;!&quot;. Na Twitch, os robôs são reconhecidos pelo selo de robô e pela lista da FrankerFaceZ; no YouTube, na Kick e no TikTok, pelo nome terminado em &quot;bot&quot;." />
                             </StackPanel>
                             <ctl:Interruptor x:Name="interruptorEsconderBots" Grid.Column="2" IsChecked="{Binding EsconderBots}"
                                              AutomationProperties.Name="Esconder bots e comandos" />
@@ -160,19 +161,96 @@
                                              AutomationProperties.Name="Esconder mensagens de outros canais" />
                         </Grid>
                         <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <!-- Os avisos de cada plataforma, cada tipo com o seu interruptor; os do YouTube e do TikTok desbotados sem o
+                             Chat Multiplataforma -->
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="&#xE789;" Style="{DynamicResource IconeDoCartao}" />
                             <StackPanel Grid.Column="1" Style="{DynamicResource TextoDaLinha}">
-                                <TextBlock Text="Esconder avisos" Style="{DynamicResource Rotulo}" />
-                                <TextBlock Text="Inscrições, presentes, raids, comunicados e sequências de visualizações da Twitch, e os novos membros do YouTube." Style="{DynamicResource Dica}" />
+                                <TextBlock Text="Avisos no chat" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Escolha quais avisos de cada plataforma aparecem no chat. Os do YouTube e do TikTok valem com o Chat Multiplataforma ligado." Style="{DynamicResource Dica}" />
                             </StackPanel>
-                            <ctl:Interruptor x:Name="interruptorEsconderAvisos" Grid.Column="2" IsChecked="{Binding EsconderAvisos}"
-                                             AutomationProperties.Name="Esconder avisos" />
+                        </Grid>
+                        <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <Grid Margin="36,0,0,0" Style="{DynamicResource LinhaDependente}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Style="{DynamicResource TextoDaLinha}">
+                                <TextBlock Text="Avisos da Twitch" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Inscrições, presentes, raids, comunicados e sequências de visualizações." Style="{DynamicResource Dica}" />
+                            </StackPanel>
+                            <ctl:Interruptor x:Name="interruptorAvisosDaTwitch" Grid.Column="1" IsChecked="{Binding MostrarAvisosDaTwitch}"
+                                             AutomationProperties.Name="Avisos da Twitch" />
+                        </Grid>
+                        <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <Grid Margin="36,0,0,0" Style="{DynamicResource LinhaDependente}" IsEnabled="{Binding ChatMultiplataforma}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Style="{DynamicResource TextoDaLinha}">
+                                <TextBlock Text="Avisos do YouTube" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Novos membros do canal, membros que sobem de nível e marcos de membro." Style="{DynamicResource Dica}" />
+                            </StackPanel>
+                            <ctl:Interruptor x:Name="interruptorAvisosDoYouTube" Grid.Column="1" IsChecked="{Binding MostrarAvisosDoYouTube}"
+                                             AutomationProperties.Name="Avisos do YouTube" />
+                        </Grid>
+                        <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <Grid Margin="36,0,0,0" Style="{DynamicResource LinhaDependente}" IsEnabled="{Binding ChatMultiplataforma}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Style="{DynamicResource TextoDaLinha}">
+                                <TextBlock Text="Presentes do TikTok" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Uma linha por envio, com a imagem e o valor em moedas, como &quot;enviou Rosa x5&quot;." Style="{DynamicResource Dica}" />
+                            </StackPanel>
+                            <ctl:Interruptor x:Name="interruptorPresentesDoTikTok" Grid.Column="1" IsChecked="{Binding MostrarPresentesDoTikTok}"
+                                             AutomationProperties.Name="Presentes do TikTok" />
+                        </Grid>
+                        <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <Grid Margin="36,0,0,0" Style="{DynamicResource LinhaDependente}" IsEnabled="{Binding ChatMultiplataforma}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Style="{DynamicResource TextoDaLinha}">
+                                <TextBlock Text="Seguidores do TikTok" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Quem passou a seguir você durante a live." Style="{DynamicResource Dica}" />
+                            </StackPanel>
+                            <ctl:Interruptor x:Name="interruptorSeguidoresDoTikTok" Grid.Column="1" IsChecked="{Binding MostrarSeguidoresDoTikTok}"
+                                             AutomationProperties.Name="Seguidores do TikTok" />
+                        </Grid>
+                        <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <Grid Margin="36,0,0,0" Style="{DynamicResource LinhaDependente}" IsEnabled="{Binding ChatMultiplataforma}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Style="{DynamicResource TextoDaLinha}">
+                                <TextBlock Text="Compartilhamentos do TikTok" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Quem compartilhou a live. Em live grande são muitos." Style="{DynamicResource Dica}" />
+                            </StackPanel>
+                            <ctl:Interruptor x:Name="interruptorCompartilhamentosDoTikTok" Grid.Column="1" IsChecked="{Binding MostrarCompartilhamentosDoTikTok}"
+                                             AutomationProperties.Name="Compartilhamentos do TikTok" />
+                        </Grid>
+                        <Rectangle Style="{DynamicResource DivisoriaDoCartao}" />
+                        <Grid Margin="36,0,0,0" Style="{DynamicResource LinhaDependente}" IsEnabled="{Binding ChatMultiplataforma}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Style="{DynamicResource TextoDaLinha}">
+                                <TextBlock Text="Superfãs do TikTok" Style="{DynamicResource Rotulo}" />
+                                <TextBlock Text="Quem virou Superfã, a assinatura do TikTok." Style="{DynamicResource Dica}" />
+                            </StackPanel>
+                            <ctl:Interruptor x:Name="interruptorSuperfasDoTikTok" Grid.Column="1" IsChecked="{Binding MostrarSuperfasDoTikTok}"
+                                             AutomationProperties.Name="Superfãs do TikTok" />
                         </Grid>
                     </StackPanel>
                 </Border>

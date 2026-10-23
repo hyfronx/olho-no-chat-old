@@ -58,7 +58,7 @@ public abstract class PaginaDoChat
 
     /// <summary>
     /// A página das opções: o chat do canal salvo, o endereço personalizado, ou as boas-vindas quando falta o canal ou o
-    /// endereço. No Chat Multiplataforma a Twitch é opcional: com o canal do YouTube ou o da Kick, o Padrão abre sem ela.
+    /// endereço. No Chat Multiplataforma a Twitch é opcional: com o canal do YouTube, o da Kick ou o do TikTok, o Padrão abre sem ela.
     /// </summary>
     public static PaginaDoChat DasOpcoes(Opcoes opcoes)
     {

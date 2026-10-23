@@ -27,6 +27,19 @@
                 <Path Fill="#53FC18" Data="M2.5,2.5 H5.5 V5.1 H6.8 V3.8 H8.1 V2.5 H11.5 V5.5 H10.2 V6.7 H8.9 V7.3 H10.2 V8.5 H11.5 V11.5 H8.1 V10.2 H6.8 V8.9 H5.5 V11.5 H2.5 Z" />
             </Grid>
         </ControlTemplate>
+        <!-- A nota branca do TikTok, com as sombras azul e vermelha, no quadrado preto -->
+        <ControlTemplate x:Key="LogoDoTikTok" TargetType="ContentControl">
+            <Grid Width="14" Height="14" VerticalAlignment="Center">
+                <Border Background="Black" CornerRadius="3" />
+                <Viewbox Margin="2.2">
+                    <Canvas Width="24" Height="24">
+                        <Path Data="{StaticResource NotaDoTikTok}" Fill="#25F4EE" Canvas.Left="-1.2" Canvas.Top="-1.2" />
+                        <Path Data="{StaticResource NotaDoTikTok}" Fill="#FE2C55" Canvas.Left="1.2" Canvas.Top="1.2" />
+                        <Path Data="{StaticResource NotaDoTikTok}" Fill="White" />
+                    </Canvas>
+                </Viewbox>
+            </Grid>
+        </ControlTemplate>
         <!-- O ponto da conexão no canto do logo, com um anel da cor da faixa para destacar do logo -->
         <Style x:Key="PontoNoLogo" TargetType="Ellipse">
             <Setter Property="Width" Value="9" />
@@ -54,9 +67,10 @@
     <Border Background="{StaticResource FundoDaFaixa}" BorderBrush="{StaticResource LinhaDaFaixa}" BorderThickness="0,0,0,1">
         <Grid>
             <!-- Fechada: só o canal; o clique abre a caixa do nome -->
-            <!-- Os canais numa linha só: o logo com o ponto da conexão no canto (verde / amarelo / vermelho; o do YouTube fica
-                 cinza esperando a live) e o nome. O YouTube e a Kick só no Chat Multiplataforma, com canal. Sem espaço, só os
-                 nomes compridos são cortados (PainelDosCanais) e deslizam com o mouse em cima (NomeQueDesliza). -->
+            <!-- Os canais numa linha só: o logo com o ponto da conexão no canto (verde / amarelo / vermelho; o do YouTube
+                 e o do TikTok ficam cinza esperando a live) e o nome. O YouTube, a Kick e o TikTok só no Chat
+                 Multiplataforma, com canal. Sem espaço, só os nomes compridos são cortados (PainelDosCanais) e deslizam
+                 com o mouse em cima (NomeQueDesliza). -->
             <Button x:Name="botaoTrocarCanal" Style="{StaticResource BotaoPlano}" Height="30" Padding="10,0,10,0"
                     AutomationProperties.Name="Trocar canal" ToolTip="{Binding DicaDaFaixa}"
                     Visibility="{Binding EditorAberto, Converter={StaticResource VisivelSe}, ConverterParameter=Nao}" Click="TrocarCanal_Click"
@@ -94,6 +108,15 @@
                                 <TextBlock x:Name="textoKick" Text="{Binding KickSalvo}" Style="{StaticResource NomeNaFaixa}" />
                             </Grid>
                         </DockPanel>
+                        <DockPanel x:Name="tikTokNaFaixa" Visibility="{Binding TikTokNaFaixa, Converter={StaticResource VisivelSe}}">
+                            <Grid DockPanel.Dock="Left" Margin="0,0,9,0" VerticalAlignment="Center">
+                                <ContentControl Template="{StaticResource LogoDoTikTok}" Focusable="False" />
+                                <Ellipse x:Name="pontoDoTikTok" Style="{StaticResource PontoNoLogo}" />
+                            </Grid>
+                            <Grid ClipToBounds="True">
+                                <TextBlock x:Name="textoTikTok" Text="{Binding TikTokSalvo, StringFormat=@{0}}" Style="{StaticResource NomeNaFaixa}" />
+                            </Grid>
+                        </DockPanel>
                     </ctl:PainelDosCanais>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Style="{StaticResource IconeDaFaixa}" Text="&#xE8AB;" FontSize="12" Foreground="{StaticResource LaranjaClaro}" />
@@ -114,6 +137,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -150,7 +174,15 @@
                          AutomationProperties.Name="Canal da Kick"
                          Visibility="{Binding Multiplataforma, Converter={StaticResource VisivelSe}}"
                          Text="{Binding TextoDaKick, UpdateSourceTrigger=PropertyChanged}" PreviewKeyDown="CaixaCanal_PreviewKeyDown" />
-                <TextBlock x:Name="dicaCanal" Grid.Row="3" Grid.ColumnSpan="4" Margin="2,5,8,0" FontSize="12" TextWrapping="Wrap" Text="{Binding Dica}">
+                <!-- e o do TikTok (também pode ficar vazio) -->
+                <ContentControl Grid.Row="3" Width="16" Margin="2,6,8,0" Template="{StaticResource LogoDoTikTok}" Focusable="False"
+                                Visibility="{Binding Multiplataforma, Converter={StaticResource VisivelSe}}" />
+                <TextBox x:Name="caixaTikTok" ctl:CaixaDeTexto.BotaoDeApagar="True" Grid.Row="3" Grid.Column="1" Margin="0,6,0,0" MaxLength="300" MinHeight="32" FontSize="14"
+                         ctl:CaixaDeTexto.TextoDeExemplo="Canal do TikTok (@ ou link da live)"
+                         AutomationProperties.Name="Canal do TikTok"
+                         Visibility="{Binding Multiplataforma, Converter={StaticResource VisivelSe}}"
+                         Text="{Binding TextoDoTikTok, UpdateSourceTrigger=PropertyChanged}" PreviewKeyDown="CaixaCanal_PreviewKeyDown" />
+                <TextBlock x:Name="dicaCanal" Grid.Row="4" Grid.ColumnSpan="4" Margin="2,5,8,0" FontSize="12" TextWrapping="Wrap" Text="{Binding Dica}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Foreground" Value="{StaticResource TextoDaDica}" />

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using System.Windows.Input;
 using System.Windows.Media;
 using OlhoNoChat.Atalhos;
@@ -34,16 +35,18 @@ public sealed class Opcoes
     /// <summary>0 = Padrão, 1 = Chat oficial da Twitch, 2 = Endereço personalizado (<see cref="Tipos"/>).</summary>
     public int TipoDeChat { get; set; } = (int)Tipos.Padrao;
     /// <summary>
-    /// "Chat Multiplataforma": o chat de uma live do YouTube e o de um canal da Kick junto com o da Twitch, só no Padrão. Ligado, os recursos só
+    /// "Chat Multiplataforma": o chat de uma live do YouTube, o de um canal da Kick e o de uma live do TikTok junto com o da Twitch, só no Padrão. Ligado, os recursos só
     /// da Twitch ficam desligados (escrever, emotes da conta, resgates, outros tipos de chat).
     /// </summary>
     public bool ChatMultiplataforma { get; set; } = false;
     /// <summary>"@nome", "UC…" ou "youtu.be/id" (<see cref="YouTube.CanalDoYouTube"/>); trocado na faixa do canal.</summary>
     public string CanalDoYouTube { get; set; } = string.Empty;
-    /// <summary>Ao entrar no chat de uma live, mostrar também as últimas mensagens que o YouTube manda (as de antes).</summary>
+    /// <summary>Ao entrar no chat de uma live, mostrar também as últimas mensagens que o YouTube e o TikTok mandam (as de antes).</summary>
     public bool MostrarHistoricoDoYouTube { get; set; } = false;
     /// <summary>O nome do canal da Kick (<see cref="Kick.CanalDaKick"/>); trocado na faixa do canal.</summary>
     public string CanalDaKick { get; set; } = string.Empty;
+    /// <summary>O nome do canal do TikTok, sem o @ (<see cref="TikTok.CanalDoTikTok"/>); trocado na faixa do canal.</summary>
+    public string CanalDoTikTok { get; set; } = string.Empty;
     public string EnderecoPersonalizado { get; set; } = string.Empty;
     public bool ApagarMensagensAntigas { get; set; } = false;
     /// <summary>Do jeito que foi digitado na aba Chat.</summary>
@@ -51,8 +54,25 @@ public sealed class Opcoes
     public bool EsconderBots { get; set; } = true;
     public bool EsconderGifs { get; set; } = false;
     public bool EsconderOutrosCanais { get; set; } = false;
-    /// <summary>Os avisos no chat Padrão: inscrições, presentes, raids, sequências... da Twitch e os de membro do YouTube.</summary>
-    public bool EsconderAvisos { get; set; } = false;
+    // Os avisos no chat Padrão, cada plataforma e cada tipo com o seu interruptor (pedido do usuário em 2026-10-23)
+    /// <summary>Inscrições, presentes, raids, comunicados, sequências de visualizações... da Twitch.</summary>
+    public bool MostrarAvisosDaTwitch { get; set; } = true;
+    /// <summary>Os de membro do YouTube (Chat Multiplataforma).</summary>
+    public bool MostrarAvisosDoYouTube { get; set; } = true;
+    /// <summary>Os presentes do TikTok, um combo por linha (Chat Multiplataforma).</summary>
+    public bool MostrarPresentesDoTikTok { get; set; } = true;
+    /// <summary>Quem seguiu o criador no TikTok (Chat Multiplataforma).</summary>
+    public bool MostrarSeguidoresDoTikTok { get; set; } = true;
+    /// <summary>Quem compartilhou a live no TikTok (Chat Multiplataforma; desligado: em live grande são muitos).</summary>
+    public bool MostrarCompartilhamentosDoTikTok { get; set; } = false;
+    /// <summary>Quem virou Superfã, a assinatura do TikTok (Chat Multiplataforma).</summary>
+    public bool MostrarSuperfasDoTikTok { get; set; } = true;
+    /// <summary>
+    /// Até a 2.4.x, "Esconder avisos" valia para a Twitch e o YouTube juntos. Só lido, para <see cref="Corrigir"/> passar
+    /// para <see cref="MostrarAvisosDaTwitch"/> e <see cref="MostrarAvisosDoYouTube"/>; não volta para o arquivo.
+    /// </summary>
+    [JsonPropertyName("EsconderAvisos"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? EsconderAvisosAntigo { get; set; }
     // Extensões de emotes do "Chat oficial da Twitch"
     public bool BetterTtv { get; set; } = true;
     public bool Emotes7tv { get; set; } = true;
@@ -150,9 +170,17 @@ public sealed class Opcoes
         if (float.IsNaN(Volume))
             Volume = padrao.Volume;
 
+        if (EsconderAvisosAntigo == true)
+        {
+            MostrarAvisosDaTwitch = false;
+            MostrarAvisosDoYouTube = false;
+        }
+        EsconderAvisosAntigo = null;
+
         Canal ??= padrao.Canal;
         CanalDoYouTube ??= padrao.CanalDoYouTube;
         CanalDaKick ??= padrao.CanalDaKick;
+        CanalDoTikTok ??= padrao.CanalDoTikTok;
         EnderecoPersonalizado ??= padrao.EnderecoPersonalizado;
         SegundosParaApagar ??= padrao.SegundosParaApagar;
         CssDoTemaNenhum ??= padrao.CssDoTemaNenhum;
@@ -183,6 +211,7 @@ public sealed class Opcoes
         Canal = Canal,
         CanalDoYouTube = CanalDoYouTube,
         CanalDaKick = CanalDaKick,
+        CanalDoTikTok = CanalDoTikTok,
         Conta = Conta,
         ListaDeUsuarios = ListaDeUsuarios,
         UsuariosBloqueados = UsuariosBloqueados,

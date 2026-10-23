@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using OlhoNoChat.Chat;
 using OlhoNoChat.Configuracoes;
 using OlhoNoChat.Kick;
+using OlhoNoChat.TikTok;
 using OlhoNoChat.Twitch;
 using OlhoNoChat.YouTube;
 
@@ -36,29 +37,31 @@ public enum EstadoDaKick
 /// A faixa do canal sem a tela: o único lugar para trocar o canal. Fechada, mostra o canal e o ponto da conexão; aberta,
 /// a caixa do nome (sempre aberta enquanto não há canal). O nome é conferido antes de trocar e, com a conta conectada,
 /// procurado na Twitch; o mesmo canal não recarrega o chat (as mensagens da tela iriam embora). No Chat Multiplataforma
-/// a faixa tem também o canal do YouTube e o da Kick (cada um com o seu ponto), trocados junto.
+/// a faixa tem também o canal do YouTube, o da Kick e o do TikTok (cada um com o seu ponto), trocados junto.
 /// </summary>
 public sealed partial class LogicaFaixaDoCanal : ObservableObject
 {
     public const string DicaPadrao = "Ex.: seucanal, @seucanal ou o link do canal";
     public const string DicaMultiplataforma =
-        "Twitch e Kick: o nome ou o link do canal. YouTube: o @ do canal, o link do canal ou o link da live. Preencha pelo menos um.";
+        "Twitch e Kick: o nome ou o link do canal. YouTube: o @ do canal, o link do canal ou o link da live. TikTok: o @ ou o link " +
+        "da live. Preencha pelo menos um.";
 
     private readonly Func<Opcoes> _opcoes;
     private readonly Func<bool> _contaConectada;
     private readonly Func<string, Task<bool?>> _canalExiste;
-    private readonly Action<string, string, string> _trocarCanal;
+    private readonly Action<string, string, string, string> _trocarCanal;
     private bool _editorPedido;
 
     /// <param name="opcoes">As opções em uso (o canal salvo).</param>
     /// <param name="contaConectada">Com a conta conectada o canal é procurado na Twitch antes de trocar.</param>
     /// <param name="canalExiste">Pergunta à Twitch; null = não deu para saber (segue em frente).</param>
     /// <param name="trocarCanal">
-    /// Grava o canal da Twitch, o do YouTube e o da Kick ("" = sem canal; o do YouTube como em
-    /// <see cref="CanalDoYouTube.Texto"/>, o da Kick como em <see cref="CanalDaKick.Ler"/>) e abre o chat deles.
+    /// Grava o canal da Twitch, o do YouTube, o da Kick e o do TikTok ("" = sem canal; o do YouTube como em
+    /// <see cref="CanalDoYouTube.Texto"/>, o da Kick como em <see cref="CanalDaKick.Ler"/>, o do TikTok como em
+    /// <see cref="CanalDoTikTok.Ler"/>) e abre o chat deles.
     /// </param>
     public LogicaFaixaDoCanal(Func<Opcoes> opcoes, Func<bool> contaConectada, Func<string, Task<bool?>> canalExiste,
-        Action<string, string, string> trocarCanal)
+        Action<string, string, string, string> trocarCanal)
     {
         _opcoes = opcoes;
         _contaConectada = contaConectada;
@@ -67,6 +70,7 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
         _texto = CanalSalvo;
         _textoDoYouTube = YouTubeSalvo;
         _textoDaKick = KickSalvo;
+        _textoDoTikTok = TikTokNaCaixa;
         _dica = DicaInicial;
     }
 
@@ -79,10 +83,13 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
     /// <summary>A caixa da Kick precisa do foco (canal da Kick errado).</summary>
     public event Action? PedirFocoNaKick;
 
+    /// <summary>A caixa do TikTok precisa do foco (canal do TikTok errado).</summary>
+    public event Action? PedirFocoNoTikTok;
+
     public string CanalSalvo => PaginaDoChat.CanalSalvo(_opcoes());
 
-    /// <summary>Há algum canal: o da Twitch, ou no Chat Multiplataforma o do YouTube ou o da Kick (a Twitch é opcional).</summary>
-    public bool TemCanal => TwitchNaFaixa || YouTubeNaFaixa || KickNaFaixa;
+    /// <summary>Há algum canal: o da Twitch, ou no Chat Multiplataforma o do YouTube, o da Kick ou o do TikTok (a Twitch é opcional).</summary>
+    public bool TemCanal => TwitchNaFaixa || OutrosCanaisNaFaixa;
 
     /// <summary>O canal da Twitch aparece na faixa fechada.</summary>
     public bool TwitchNaFaixa => CanalSalvo.Length > 0;
@@ -90,7 +97,7 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
     /// <summary>O texto de exemplo da caixa da Twitch: no Chat Multiplataforma ela pode ficar vazia.</summary>
     public string ExemploDaTwitch => Multiplataforma ? "Canal da Twitch (nome ou link)" : "Nome do canal da Twitch";
 
-    /// <summary>Chat Multiplataforma: a faixa mostra também o canal do YouTube e o da Kick.</summary>
+    /// <summary>Chat Multiplataforma: a faixa mostra também o canal do YouTube, o da Kick e o do TikTok.</summary>
     public bool Multiplataforma => _opcoes().ChatMultiplataforma;
 
     /// <summary>O canal do YouTube salvo ("@nome", "UC…" ou "youtu.be/id"), ou "".</summary>
@@ -105,11 +112,20 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
     /// <summary>O canal da Kick aparece na faixa fechada.</summary>
     public bool KickNaFaixa => Multiplataforma && KickSalvo.Length > 0;
 
-    /// <summary>A faixa fechada tem o YouTube ou a Kick: a dica diz o estado de cada plataforma.</summary>
-    public bool OutrosCanaisNaFaixa => YouTubeNaFaixa || KickNaFaixa;
+    /// <summary>O canal do TikTok salvo (o nome, sem o @), ou "".</summary>
+    public string TikTokSalvo => CanalDoTikTok.Ler(_opcoes().CanalDoTikTok) ?? string.Empty;
+
+    /// <summary>O canal do TikTok aparece na faixa fechada.</summary>
+    public bool TikTokNaFaixa => Multiplataforma && TikTokSalvo.Length > 0;
+
+    // Na caixa, com o @ como o TikTok mostra
+    private string TikTokNaCaixa => TikTokSalvo.Length > 0 ? "@" + TikTokSalvo : string.Empty;
+
+    /// <summary>A faixa fechada tem o YouTube, a Kick ou o TikTok: a dica diz o estado de cada plataforma.</summary>
+    public bool OutrosCanaisNaFaixa => YouTubeNaFaixa || KickNaFaixa || TikTokNaFaixa;
 
     /// <summary>A faixa fechada tem mais de um canal: o "Trocar canal" vira só o ícone (o texto fica na dica).</summary>
-    public bool VariosCanaisNaFaixa => new[] { TwitchNaFaixa, YouTubeNaFaixa, KickNaFaixa }.Count(sim => sim) > 1;
+    public bool VariosCanaisNaFaixa => new[] { TwitchNaFaixa, YouTubeNaFaixa, KickNaFaixa, TikTokNaFaixa }.Count(sim => sim) > 1;
 
     private string DicaInicial => Multiplataforma ? DicaMultiplataforma : DicaPadrao;
 
@@ -126,6 +142,10 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
     /// <summary>O canal da Kick na caixa (Chat Multiplataforma).</summary>
     [ObservableProperty]
     private string _textoDaKick;
+
+    /// <summary>O canal do TikTok na caixa (Chat Multiplataforma).</summary>
+    [ObservableProperty]
+    private string _textoDoTikTok;
 
     [ObservableProperty]
     private string _dica;
@@ -153,6 +173,11 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
     [NotifyPropertyChangedFor(nameof(DicaDaFaixa))]
     private EstadoDaKick _conexaoDaKick;
 
+    /// <summary>A leitura do chat do TikTok (o ponto do TikTok na faixa).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DicaDaFaixa))]
+    private EstadoDoTikTok _conexaoDoTikTok;
+
     /// <summary>A dica da faixa fechada: a conexão (de cada plataforma no Chat Multiplataforma) e o que o clique faz.</summary>
     public string DicaDaFaixa
     {
@@ -175,6 +200,8 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
                     linhas.Add("YouTube: " + TextoDoEstadoDoYouTube(ConexaoDoYouTube, YouTubeSalvo));
                 if (KickNaFaixa)
                     linhas.Add("Kick: " + TextoDoEstadoDaKick(ConexaoDaKick, KickSalvo));
+                if (TikTokNaFaixa)
+                    linhas.Add("TikTok: " + TextoDoEstadoDoTikTok(ConexaoDoTikTok, TikTokNaCaixa));
                 estado = string.Join("\n", linhas);
             }
             return estado == null ? "Clique para trocar de canal." : estado + "\nClique para trocar de canal.";
@@ -202,6 +229,17 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
         _ => "desligado.",
     };
 
+    /// <summary>O estado da leitura do TikTok em palavras.</summary>
+    public static string TextoDoEstadoDoTikTok(EstadoDoTikTok estado, string canal) => estado switch
+    {
+        EstadoDoTikTok.Procurando => $"procurando a live de {canal}…",
+        EstadoDoTikTok.Conectado => $"lendo o chat da live de {canal}.",
+        EstadoDoTikTok.EsperandoALive => $"{canal} não está ao vivo. Esperando a live começar…",
+        EstadoDoTikTok.CanalNaoExiste => $"não achei o perfil {canal} no TikTok. Confira o nome.",
+        EstadoDoTikTok.SemConexao => "sem conexão com o TikTok. Tentando de novo…",
+        _ => "desligado.",
+    };
+
     partial void OnTextoChanged(string value)
     {
         // Enquanto o canal é procurado, o "Procurando o canal…" fica
@@ -216,6 +254,12 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
     }
 
     partial void OnTextoDaKickChanged(string value)
+    {
+        if (!Procurando)
+            MostrarDica(null);
+    }
+
+    partial void OnTextoDoTikTokChanged(string value)
     {
         if (!Procurando)
             MostrarDica(null);
@@ -241,7 +285,7 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
         PedirFoco?.Invoke(true);
     }
 
-    /// <summary>Chat Multiplataforma ligado pela barra sem canal do YouTube nem da Kick: a faixa abre na caixa do YouTube.</summary>
+    /// <summary>Chat Multiplataforma ligado pela barra sem canal do YouTube, da Kick nem do TikTok: a faixa abre na caixa do YouTube.</summary>
     public void AbrirEditorNoYouTube()
     {
         _editorPedido = true;
@@ -274,7 +318,7 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
         if (Procurando)
             return;
 
-        // No Chat Multiplataforma a Twitch pode ficar vazia, se houver o YouTube ou a Kick
+        // No Chat Multiplataforma a Twitch pode ficar vazia, se houver o YouTube, a Kick ou o TikTok
         string nome = NomesDaTwitch.Extrair(Texto);
         if (nome.Length > 0 && !NomesDaTwitch.EhValido(nome))
         {
@@ -284,9 +328,10 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
 
         nome = nome.ToLowerInvariant();
 
-        // Chat Multiplataforma: o do YouTube e o da Kick podem ficar vazios (só a Twitch)
+        // Chat Multiplataforma: o do YouTube, o da Kick e o do TikTok podem ficar vazios (só a Twitch)
         string youTube = YouTubeSalvo;
         string kick = KickSalvo;
+        string tikTok = TikTokSalvo;
         if (Multiplataforma)
         {
             if (string.IsNullOrWhiteSpace(TextoDoYouTube))
@@ -318,16 +363,31 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
                 PedirFocoNaKick?.Invoke();
                 return;
             }
+
+            if (string.IsNullOrWhiteSpace(TextoDoTikTok))
+            {
+                tikTok = string.Empty;
+            }
+            else if (CanalDoTikTok.Ler(TextoDoTikTok) is { } canalDoTikTok)
+            {
+                tikTok = canalDoTikTok;
+            }
+            else
+            {
+                MostrarDica(CanalDoTikTok.DicaInvalido, erro: true);
+                PedirFocoNoTikTok?.Invoke();
+                return;
+            }
         }
 
-        if (nome.Length == 0 && (!Multiplataforma || (youTube.Length == 0 && kick.Length == 0)))
+        if (nome.Length == 0 && (!Multiplataforma || (youTube.Length == 0 && kick.Length == 0 && tikTok.Length == 0)))
         {
             Erro(Multiplataforma ? "Digite pelo menos um canal." : "Digite o nome do canal.");
             return;
         }
 
         bool mesmaTwitch = string.Equals(nome, CanalSalvo, StringComparison.OrdinalIgnoreCase);
-        if (mesmaTwitch && youTube == YouTubeSalvo && kick == KickSalvo)
+        if (mesmaTwitch && youTube == YouTubeSalvo && kick == KickSalvo && tikTok == TikTokSalvo)
         {
             FecharEditor();
             return;
@@ -355,13 +415,13 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
             }
         }
 
-        Trocar(nome, youTube, kick);
+        Trocar(nome, youTube, kick, tikTok);
     }
 
-    private void Trocar(string canal, string youTube, string kick)
+    private void Trocar(string canal, string youTube, string kick, string tikTok)
     {
         _editorPedido = false;
-        _trocarCanal(canal, youTube, kick);
+        _trocarCanal(canal, youTube, kick, tikTok);
         MostrarOsSalvos();
         MostrarDica(null);
         AvisarTudo();
@@ -372,6 +432,7 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
         Texto = CanalSalvo;
         TextoDoYouTube = YouTubeSalvo;
         TextoDaKick = KickSalvo;
+        TextoDoTikTok = TikTokNaCaixa;
     }
 
     private void Erro(string texto)
@@ -396,6 +457,8 @@ public sealed partial class LogicaFaixaDoCanal : ObservableObject
         OnPropertyChanged(nameof(YouTubeNaFaixa));
         OnPropertyChanged(nameof(KickSalvo));
         OnPropertyChanged(nameof(KickNaFaixa));
+        OnPropertyChanged(nameof(TikTokSalvo));
+        OnPropertyChanged(nameof(TikTokNaFaixa));
         OnPropertyChanged(nameof(OutrosCanaisNaFaixa));
         OnPropertyChanged(nameof(TwitchNaFaixa));
         OnPropertyChanged(nameof(VariosCanaisNaFaixa));

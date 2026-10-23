@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using OlhoNoChat.Configuracoes;
+using OlhoNoChat.TikTok;
 using OlhoNoChat.Twitch;
 using OlhoNoChat.YouTube;
 
@@ -132,22 +133,27 @@ public sealed partial class LogicaFiltros : ObservableObject
     private void Desbloquear(string nome) => UsuariosBloqueados.Remove(nome);
 
     // Aceita "nome", "@nome", "twitch.tv/nome" ou o link do canal. O nome entra com as maiúsculas digitadas. No Chat
-    // Multiplataforma os filtros valem também para o YouTube: um @ do YouTube com . ou - (que a Twitch não tem) ou o link
-    // youtube.com/@nome também vale.
+    // Multiplataforma os filtros valem também para o YouTube e o TikTok: um @ com . ou - (que a Twitch não tem) ou o link
+    // youtube.com/@nome ou tiktok.com/@nome também vale.
     private static bool Adicionar(string digitado, ObservableCollection<string> lista, out string? erro)
     {
         string nome = NomesDaTwitch.Extrair(digitado);
-        bool doYouTube = false;
+        bool deOutraPlataforma = false;
         bool jeitoDoYouTube = nome.IndexOfAny(['.', '-']) >= 0 || digitado.Contains("youtube.com", StringComparison.OrdinalIgnoreCase);
-        if (jeitoDoYouTube && CanalDoYouTube.Ler(digitado) is { Tipo: TipoDeCanalDoYouTube.Arroba } canal)
+        if (digitado.Contains("tiktok.com", StringComparison.OrdinalIgnoreCase) && CanalDoTikTok.Ler(digitado) is { } doTikTok)
+        {
+            nome = doTikTok;
+            deOutraPlataforma = true;
+        }
+        else if (jeitoDoYouTube && CanalDoYouTube.Ler(digitado) is { Tipo: TipoDeCanalDoYouTube.Arroba } canal)
         {
             nome = canal.Valor;
-            doYouTube = true;
+            deOutraPlataforma = true;
         }
 
         if (nome.Length == 0)
             erro = "Digite o nome do usuário.";
-        else if (!doYouTube && !NomesDaTwitch.EhValido(nome))
+        else if (!deOutraPlataforma && !NomesDaTwitch.EhValido(nome))
             erro = NomesDaTwitch.DicaNomeInvalido;
         else if (lista.Any(u => string.Equals(u, nome, StringComparison.OrdinalIgnoreCase)))
             erro = nome + " já está na lista.";

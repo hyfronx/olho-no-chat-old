@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
 using OlhoNoChat.Controles;
+using OlhoNoChat.TikTok;
 using OlhoNoChat.YouTube;
 
 namespace OlhoNoChat.Janelas.Chat;
@@ -41,6 +42,7 @@ public partial class FaixaDoCanal : UserControl
                 _logica.PedirFoco -= Focar;
                 _logica.PedirFocoNoYouTube -= FocarNoYouTube;
                 _logica.PedirFocoNaKick -= FocarNaKick;
+                _logica.PedirFocoNoTikTok -= FocarNoTikTok;
             }
             _logica = value;
             DataContext = value;
@@ -50,6 +52,7 @@ public partial class FaixaDoCanal : UserControl
                 value.PedirFoco += Focar;
                 value.PedirFocoNoYouTube += FocarNoYouTube;
                 value.PedirFocoNaKick += FocarNaKick;
+                value.PedirFocoNoTikTok += FocarNoTikTok;
             }
             MostrarPonto();
         }
@@ -65,7 +68,8 @@ public partial class FaixaDoCanal : UserControl
     private void LogicaMudou(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(LogicaFaixaDoCanal.Conexao) or nameof(LogicaFaixaDoCanal.EditorAberto)
-            or nameof(LogicaFaixaDoCanal.ConexaoDoYouTube) or nameof(LogicaFaixaDoCanal.ConexaoDaKick))
+            or nameof(LogicaFaixaDoCanal.ConexaoDoYouTube) or nameof(LogicaFaixaDoCanal.ConexaoDaKick)
+            or nameof(LogicaFaixaDoCanal.ConexaoDoTikTok))
             MostrarPonto();
     }
 
@@ -85,6 +89,14 @@ public partial class FaixaDoCanal : UserControl
             EstadoDaKick.Conectando => Amarelo,
             EstadoDaKick.Conectado => Verde,
             EstadoDaKick.CanalNaoExiste or EstadoDaKick.SemConexao => Vermelho,
+            _ => Cinza,
+        };
+        // O do TikTok, como o do YouTube
+        pontoDoTikTok.Fill = (_logica?.ConexaoDoTikTok ?? EstadoDoTikTok.Desligado) switch
+        {
+            EstadoDoTikTok.Procurando => Amarelo,
+            EstadoDoTikTok.Conectado => Verde,
+            EstadoDoTikTok.CanalNaoExiste or EstadoDoTikTok.SemConexao => Vermelho,
             _ => Cinza,
         };
 
@@ -134,6 +146,8 @@ public partial class FaixaDoCanal : UserControl
 
     private void FocarNaKick() => FocarESelecionar(caixaKick);
 
+    private void FocarNoTikTok() => FocarESelecionar(caixaTikTok);
+
     private void FocarESelecionar(TextBox caixa)
     {
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
@@ -163,7 +177,7 @@ public partial class FaixaDoCanal : UserControl
             NomeQueDesliza.Parar(nome);
     }
 
-    private TextBlock[] Nomes => [textoCanal, textoYouTube, textoKick];
+    private TextBlock[] Nomes => [textoCanal, textoYouTube, textoKick, textoTikTok];
 
     private void Cancelar_Click(object sender, RoutedEventArgs e) => _logica?.FecharEditor();
 

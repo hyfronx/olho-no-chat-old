@@ -97,7 +97,10 @@ public sealed class ImportacaoDoArquivoAntigoTestes
             // Nasceram depois do arquivo antigo: ficam com o padrão
             .Where(p => p.Name is not (nameof(Opcoes.EsconderTituloDoChat) or nameof(Opcoes.EsconderPlacarDoTopo) or nameof(Opcoes.EsconderDestaques)
                 or nameof(Opcoes.ChatMultiplataforma) or nameof(Opcoes.CanalDoYouTube) or nameof(Opcoes.MostrarHistoricoDoYouTube)
-                or nameof(Opcoes.CanalDaKick) or nameof(Opcoes.EsconderAvisos)))
+                or nameof(Opcoes.CanalDaKick) or nameof(Opcoes.CanalDoTikTok)
+                or nameof(Opcoes.MostrarAvisosDaTwitch) or nameof(Opcoes.MostrarAvisosDoYouTube) or nameof(Opcoes.MostrarPresentesDoTikTok)
+                or nameof(Opcoes.MostrarSeguidoresDoTikTok) or nameof(Opcoes.MostrarCompartilhamentosDoTikTok)
+                or nameof(Opcoes.MostrarSuperfasDoTikTok) or nameof(Opcoes.EsconderAvisosAntigo)))
             .Where(p => JsonSerializer.Serialize(p.GetValue(convertidas), ArquivoDeConfiguracoes.Formato)
                         == JsonSerializer.Serialize(p.GetValue(padrao), ArquivoDeConfiguracoes.Formato))
             .Select(p => p.Name)
