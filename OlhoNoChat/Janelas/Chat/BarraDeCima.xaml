@@ -49,8 +49,8 @@
             <Rectangle Style="{StaticResource SeparadorDaBarra}" />
 
             <!-- Chat Multiplataforma (Twitch, YouTube, Kick e TikTok) ou só a Twitch: os logos das quatro plataformas em
-                 bolinhas sobrepostas do tamanho da engrenagem (opção "C", em teste; a opção "A", em ladrilhos 2×2, está
-                 guardada em ..\botao-multiplataforma-opcao-A.xaml, fora do git). Ligado: todos coloridos; só Twitch: o do
+                 bolinhas sobrepostas do tamanho da engrenagem (opção "C", escolhida pelo usuário em 2026-10-23; por ela a
+                 janela tem largura mínima de 376). Ligado: todos coloridos; só Twitch: o do
                  YouTube, o da Kick e o do TikTok ficam apagados, em branco e laranja. O anel da cor da barra separa as
                  bolinhas. -->
             <ToggleButton x:Name="botaoMultiplataforma" Style="{StaticResource BotaoDaBarraLigaDesliga}" Width="76"

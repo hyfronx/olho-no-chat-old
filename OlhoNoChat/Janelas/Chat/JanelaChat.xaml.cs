@@ -918,7 +918,7 @@ public partial class JanelaChat : Window
         WindowState = WindowState.Normal;
         Left = 10;
         Top = 10;
-        Width = 360; // o mesmo tamanho da primeira abertura (decisão 7)
+        Width = 380; // o mesmo tamanho da primeira abertura (decisão 7; 380 desde que o botão do Chat Multiplataforma cresceu)
         Height = 530;
 
         if (MessageBox.Show("Abrir a pasta de configurações?", "Pasta de configurações", MessageBoxButton.YesNo, MessageBoxImage.Question)
