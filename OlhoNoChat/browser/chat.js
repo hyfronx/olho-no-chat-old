@@ -275,6 +275,9 @@
             }
         }
 
+        let parts = splitAtPlaces(text, [...twitchEmotePlaces(tags.emotes), ...gifPlaces(tags.gifs)]);
+        if (tags.bits) parts = addCheers(parts);
+
         showLine({
             id: tags.id,
             sourceRoom,
@@ -283,7 +286,7 @@
             color: userColor(login, tags.color),
             reward,
             action,
-            parts: addOtherEmotes(splitAtPlaces(text, [...twitchEmotePlaces(tags.emotes), ...gifPlaces(tags.gifs)]))
+            parts: addOtherEmotes(parts)
         }, tags.badges || '');
     }
 
@@ -637,6 +640,75 @@
     loadEmotes('https://api.betterttv.net/3/cached/emotes/global', emoteSets.global[BTTV], d => d, bttvEmote);
     loadEmotes('https://api.betterttv.net/3/cached/frankerfacez/emotes/global', emoteSets.global[FFZ], d => d, ffzEmote);
 
+    // --- Cheers (Bits) -------------------------------------------------------------------------------
+    // A message with Bits (tag "bits") has words like "Cheer100": a cheermote prefix and the Bits it gives. Each one
+    // becomes the cheermote's picture (animated) for the highest tier it reaches, then the number in the tier's color,
+    // like on Twitch. The global cheermotes and the channel's own come from Twitch's public GraphQL (the address its
+    // own site uses, no login); the picture's address is built from the group's template, with the prefix in lowercase.
+
+    const cheermotes = new Map(); // lowercase prefix -> { template, tiers (highest first) }
+    let cheerColors = [];         // [{ bits, color }], highest first
+
+    function loadCheermotes(roomId) {
+        const query = '{ cheerConfig { displayConfig { colors { bits color } } groups { templateURL nodes { prefix tiers { bits } } } } '
+            + 'user(id: ' + JSON.stringify(roomId) + ') { cheer { cheerGroups { templateURL nodes { prefix tiers { bits } } } } } }';
+        return fetch('https://gql.twitch.tv/gql', {
+            method: 'POST',
+            headers: { 'Client-Id': 'kimne78kx3ncx6brgo4mv6wki5h1ko' },
+            body: JSON.stringify({ query })
+        })
+            .then(response => response.ok ? response.json() : null)
+            .then(result => {
+                const data = result && result.data;
+                if (!data) return;
+                cheerColors = ((data.cheerConfig && data.cheerConfig.displayConfig.colors) || []).sort((a, b) => b.bits - a.bits);
+                const groups = [...((data.cheerConfig && data.cheerConfig.groups) || []),
+                                ...((data.user && data.user.cheer && data.user.cheer.cheerGroups) || [])];
+                groups.forEach(group => (group.nodes || []).forEach(node => cheermotes.set(node.prefix.toLowerCase(), {
+                    template: group.templateURL,
+                    tiers: (node.tiers || []).map(t => t.bits).sort((a, b) => b - a)
+                })));
+            })
+            .catch(e => console.warn('[ONC] Could not load the cheermotes', e));
+    }
+
+    function cheerPart(word) {
+        const m = /^([a-z]+?)(\d+)$/i.exec(word);
+        const cheermote = m && cheermotes.get(m[1].toLowerCase());
+        const bits = m ? Number(m[2]) : 0;
+        const tier = cheermote && cheermote.tiers.find(t => t <= bits);
+        if (!tier) return null;
+        const url = scale => cheermote.template.replace('PREFIX', m[1].toLowerCase()).replace('BACKGROUND', darkTheme ? 'dark' : 'light')
+            .replace('ANIMATION', 'animated').replace('TIER', tier).replace('SCALE', scale).replace('EXTENSION', 'gif');
+        const color = (cheerColors.find(c => c.bits <= bits) || {}).color;
+        return { emote: { src: url(1), srcset: url(2) + ' 2x, ' + url(4) + ' 4x' }, name: word, cheer: { bits, color } };
+    }
+
+    // Splits the text parts of a message with Bits at its cheer words
+    function addCheers(parts) {
+        const result = [];
+        parts.forEach(part => {
+            if (typeof part !== 'string') {
+                result.push(part);
+                return;
+            }
+            let text = '';
+            part.split(' ').forEach((word, i) => {
+                if (i > 0) text += ' ';
+                const cheer = cheerPart(word);
+                if (!cheer) {
+                    text += word;
+                    return;
+                }
+                if (text) result.push(text);
+                result.push(cheer);
+                text = '';
+            });
+            if (text) result.push(text);
+        });
+        return result;
+    }
+
     // --- Bots ----------------------------------------------------------------------------------------
     // "Esconder bots e comandos": on Twitch a bot is an account with Twitch's own "Chat Bot" badge (bot-badge, given to
     // bots that send through the chat API) or one on FrankerFaceZ's public list of known bots (Nightbot,
@@ -666,7 +738,8 @@
                 d => d && d.emote_set && d.emote_set.emotes, sevenTvEmote),
             loadEmotes('https://api.betterttv.net/3/cached/users/twitch/' + id, emoteSets.channel[BTTV],
                 d => d && (d.channelEmotes || []).concat(d.sharedEmotes || []), bttvEmote),
-            loadEmotes('https://api.betterttv.net/3/cached/frankerfacez/users/twitch/' + id, emoteSets.channel[FFZ], d => d, ffzEmote)
+            loadEmotes('https://api.betterttv.net/3/cached/frankerfacez/users/twitch/' + id, emoteSets.channel[FFZ], d => d, ffzEmote),
+            loadCheermotes(roomId)
         ];
         // The list of known bots too, so the first messages of a bot are hidden as well
         Promise.race([Promise.all([...loads, knownBotsLoad]), new Promise(resolve => setTimeout(resolve, 3000))]).then(releaseHeldMessages);
@@ -809,6 +882,13 @@
             img.alt = img.title = part.name;
             if (!(part.emote.zeroWidth && stackOnPreviousEmote(message, img)))
                 message.append(img);
+            if (part.cheer) {
+                const bits = document.createElement('span');
+                bits.className = 'onc-cheer-bits';
+                bits.textContent = part.cheer.bits;
+                if (part.cheer.color) bits.style.color = part.cheer.color;
+                message.append(bits);
+            }
         });
         linkify(message);
 

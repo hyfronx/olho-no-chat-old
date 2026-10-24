@@ -53,6 +53,11 @@ body {
     margin-bottom: -7px;
 }
 
+/* The Bits of a cheer, after its cheermote, in the tier's color (chat.js) */
+.onc-cheer-bits {
+    font-weight: bold;
+}
+
 /* A GIF sent in the chat (GIPHY): on its own line under the name, never taller than about six lines */
 .onc-gif {
     display: block;
