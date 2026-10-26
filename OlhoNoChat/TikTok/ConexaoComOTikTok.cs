@@ -29,7 +29,7 @@ public interface ISocketDoTikTok : IDisposable
 
 /// <summary>
 /// Os pedidos de verdade, como o site do TikTok faz para quem assiste sem conta: um cookie de visitante ("ttwid", que o
-/// TikTok dá em qualquer página), a sala pelo <c>api-live/user/room</c> e o WebSocket do chat com esse cookie. Nada
+/// TikTok dá na página das lives), a sala pelo <c>api-live/user/room</c> e o WebSocket do chat com esse cookie. Nada
 /// disso pede login nem assinatura. O WebSocket fica aqui, e não na página do chat como o da Kick, porque o navegador
 /// não deixa pôr o cookie num WebSocket para outro site.
 /// </summary>
@@ -113,15 +113,15 @@ public sealed class ConexaoComOTikTok : IConexaoComOTikTok
         throw erro!;
     }
 
-    // O cookie de visitante: o TikTok dá um na página inicial, mas não sempre (em 2026-10, mais ou menos metade das
-    // vezes a página vem sem ele, com o cabeçalho "X-TT-System-Error"): pede de novo algumas vezes
+    // O cookie de visitante: vem da página das lives. A página inicial também dava, mas não sempre, e em 2026-10-26
+    // parou de vez (vem com o cabeçalho "X-TT-System-Error: 3"). Por garantia, pede de novo algumas vezes
     private async Task<string> CookieAsync(bool novo, CancellationToken cancelar)
     {
         if (_ttwid is { } guardado && !novo)
             return guardado;
         for (int tentativa = 1; ; tentativa++)
         {
-            using HttpRequestMessage pedido = Pedido("/");
+            using HttpRequestMessage pedido = Pedido("/live");
             using HttpResponseMessage resposta = await Http.SendAsync(pedido, HttpCompletionOption.ResponseHeadersRead, cancelar).ConfigureAwait(false);
             resposta.EnsureSuccessStatusCode();
             string? ttwid = resposta.Headers.TryGetValues("Set-Cookie", out IEnumerable<string>? cookies)
